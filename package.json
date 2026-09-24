@@ -1,0 +1,15 @@
+{
+  "name": "entrylink",
+  "version": "0.1.0",
+  "private": true,
+  "description": "EntryLink — smart event registration, QR ticketing and crowd entry management",
+  "scripts": {
+    "install:all": "npm --prefix apps/api install && npm --prefix apps/web install && npm --prefix apps/mobile install",
+    "seed": "npm --prefix apps/api run seed",
+    "api": "npm --prefix apps/api run dev",
+    "web": "npm --prefix apps/web run dev",
+    "mobile": "npm --prefix apps/mobile start",
+    "test": "npm --prefix apps/api test",
+    "build:web": "npm --prefix apps/web run build"
+  }
+}

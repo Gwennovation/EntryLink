@@ -78,7 +78,10 @@ async function admit({ ticket, eventId, staffId, method, note }) {
   } else {
     await publish('ticket.scan_rejected', {
       actorId: staffId, entityType: 'ticket', entityId: outcome.ticket?.id ?? null, eventId,
-      data: { result: outcome.result, method, short_code: outcome.ticket?.short_code ?? null },
+      data: {
+        result: outcome.result, method,
+        short_code: outcome.ticket?.short_code ?? null, attendee_name: outcome.ticket?.attendee_name ?? null,
+      },
     });
   }
   return outcome;

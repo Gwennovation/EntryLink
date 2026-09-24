@@ -3,7 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 
 // Isolate uploads per test run; must be set before config.js is imported.
-process.env.UPLOAD_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'entrylink-test-'));
+// The dot-directory mirrors the real apps/api/.data/uploads layout.
+process.env.UPLOAD_DIR = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'entrylink-test-')), '.data', 'uploads');
 
 const { default: request } = await import('supertest');
 const bcrypt = (await import('bcryptjs')).default;

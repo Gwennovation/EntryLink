@@ -122,7 +122,8 @@ router.get('/:id/proof', async (req, res) => {
   res.set('Content-Type', reg.proof_mime);
   res.set('Content-Disposition', `inline; filename="proof-${reg.id}"`);
   res.set('Cache-Control', 'private, no-store');
-  res.sendFile(file);
+  // Uploads live under .data/, and send() refuses dot-directories unless told otherwise.
+  res.sendFile(file, { dotfiles: 'allow' });
 });
 
 const noteSchema = (required) => z.object({
