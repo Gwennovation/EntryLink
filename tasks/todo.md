@@ -23,35 +23,57 @@ entrylink/
 
 ## Checklist
 ### API
-- [ ] Schema + migrations: users, events, ticket_types, registrations, registration_history, tickets, entry_logs, comments, notifications, audit_logs
-- [ ] Auth (signup for attendees, login, me) + RBAC middleware
-- [ ] User management (admin) — FR-011
-- [ ] Event + ticket type management (organizer) — FR-009
-- [ ] Registration + proof upload (attendee), resubmit after revision — FR-001/002
-- [ ] Review workflow: approve / reject / request revision — FR-003
-- [ ] Auto ticket + QR generation on approval — FR-004
-- [ ] Gate scan + manual override, duplicate rejection — FR-005/006
-- [ ] Comments — FR-012; Notifications log — spec 2.1
-- [ ] Audit log + verify — FR-007/010, NFR-003
-- [ ] Stats, SSE live feed, end-of-event report (JSON + CSV) — FR-008/013
-- [ ] Seed script with demo accounts per role
-- [ ] Integration tests (node:test + supertest, in-memory PGlite) covering the full register → approve → scan → duplicate flow and RBAC denials
+- [x] Schema + migrations: users, events, ticket_types, registrations, registration_history, tickets, entry_logs, comments, notifications, audit_logs
+- [x] Auth (signup for attendees, login, me) + RBAC middleware
+- [x] User management (admin) — FR-011
+- [x] Event + ticket type management (organizer) — FR-009
+- [x] Registration + proof upload (attendee), resubmit after revision — FR-001/002
+- [x] Review workflow: approve / reject / request revision — FR-003
+- [x] Auto ticket + QR generation on approval — FR-004
+- [x] Gate scan + manual override, duplicate rejection — FR-005/006
+- [x] Comments — FR-012; Notifications log — spec 2.1
+- [x] Audit log + verify — FR-007/010, NFR-003
+- [x] Stats, SSE live feed, end-of-event report (JSON + CSV) — FR-008/013
+- [x] Seed script with demo accounts per role
+- [x] Integration tests (node:test + supertest, in-memory PGlite) covering the full register → approve → scan → duplicate flow and RBAC denials
 
 ### Web
-- [ ] Login + role-based nav
-- [ ] Admin: users, audit log (+ verify)
-- [ ] Organizer: events, ticket types, live dashboard, report download
-- [ ] Coordinator: review queue, proof viewer, comments, actions
-- [ ] Gate: camera QR scanner + manual code entry, big valid/invalid result
+- [x] Login + role-based nav
+- [x] Admin: users, audit log (+ verify)
+- [x] Organizer: events, ticket types, live dashboard, report download
+- [x] Coordinator: review queue, proof viewer, comments, actions
+- [x] Gate: camera QR scanner + manual code entry, big valid/invalid result
 
 ### Mobile
-- [ ] Login / sign up
-- [ ] Browse events → register + upload proof
-- [ ] My registrations (status, comments, resubmit)
-- [ ] Ticket wallet (QR), notifications
+- [x] Login / sign up
+- [x] Browse events → register + upload proof
+- [x] My registrations (status, comments, resubmit)
+- [x] Ticket wallet (QR), notifications
 
 ### Docs
-- [ ] README (setup), docs/architecture.md, docs/api.md
+- [x] README (setup), docs/architecture.md, docs/api.md
 
 ## Review
-_(filled in after verification)_
+
+**Verified**
+- API: 31/31 integration tests pass (`npm test`), covering the full register → revise → approve → ticket → scan → duplicate flow, forged/tampered QR codes, wrong-event scans, capacity limits, reports and CSV, audit chain and immutability triggers, and a role-permission matrix.
+- Live server: SSE dashboard updates on gate scans without a reload; `/audit/verify` passes on seeded plus live data.
+- Web (browser pane): review queue, registration detail with the proof viewer, live dashboard (counts and gate feed update in real time), gate page (the camera fallback message shows when access is denied), audit log with verify, users page. `vite build` is clean.
+- QR decode path: a real ticket payload rendered to a QR matrix decodes correctly with jsQR (the library the gate scanner uses).
+- Mobile (Expo web at 375×812): login, events list, ticket screen, inbox with unread badge, registration detail with history. No console errors.
+
+**Bugs found and fixed during verification**
+1. Proof files returned 500: Express `sendFile` refuses paths under a dot-directory (`.data/uploads`). Fixed with `dotfiles: 'allow'`, and the tests now use a dot path so this is covered (the test failed before the fix and passes after).
+2. The live feed showed "Unknown ticket" for rejected scans: `ticket.scan_rejected` now carries `attendee_name`.
+3. Narrow viewports scrolled sideways because the grid column grew to fit wide tables. Fixed with `min-width: 0` on `main`.
+4. The mobile tab label "Registrations" was cut off. Renamed to "Bookings".
+
+**Not verified (needs a person or a device)**
+- Live camera scanning (the browser pane blocks camera access). Decode logic is verified offline, but test on a phone over HTTPS or a tunnel.
+- Mobile on a physical iOS/Android device through Expo Go, including the native image/PDF picker and the multipart upload shape `{ uri, name, type }`.
+- Form submissions in the web and mobile UIs. Actions were driven through the API while the UI was checked for rendering; click through the README demo once yourself.
+- Real PostgreSQL (`DATABASE_URL`). The same SQL runs on PGlite, but nobody has run it against a Postgres server yet.
+
+**Follow-ups worth doing**
+- Login rate limiting; a short-lived SSE stream token instead of the JWT in the query string.
+- `npx expo lint` hasn't been run: it needs eslint config installed, and the registry was very slow today.
