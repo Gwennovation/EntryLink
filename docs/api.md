@@ -89,6 +89,20 @@ Roles: `admin`, `organizer`, `coordinator`, `gate_staff`, `attendee`.
 | GET | `/tickets/mine` | attendee | Each ticket includes `short_code`, `status`, `qr_payload`, and `qr_image` (PNG data URL) |
 | GET | `/tickets/:id` | attendee (owner) | |
 
+## Organizer backup QR codes
+
+For when an attendee didn't receive their ticket (failed delivery, lost phone, no app). Only the
+**owning organizer** can use these; coordinators, gate staff and admins get 403. A QR is a bearer
+credential, so every view and export is written to the audit log (`ticket.qr_viewed`, `ticket.qr_exported`).
+
+| Method | Path | Role | Notes |
+|---|---|---|---|
+| GET | `/events/:id/tickets?status=&q=` | owner organizer | Roster (no QR, no secrets). `q` matches name, email, or short code. Max 500 rows; `truncated: true` if there are more. |
+| GET | `/events/:id/tickets/:ticketId/qr` | owner organizer | `{ ticket }` with `qr_payload` and `qr_image`, identical to the attendee's wallet copy |
+| GET | `/events/:id/tickets/qr-sheet?status=&q=` | owner organizer | `{ tickets, truncated }` with QR images, for printing. Max 500. |
+
+The gate treats an organizer-provided copy exactly like the attendee's own, so a ticket is still admitted only once.
+
 ## Gate check-in (FR-005, FR-006)
 
 | Method | Path | Role | Notes |

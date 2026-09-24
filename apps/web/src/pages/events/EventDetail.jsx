@@ -46,6 +46,7 @@ export default function EventDetail() {
         <div className="row">
           {e.status !== 'draft' && user.role !== 'admin' && <Link className="btn" to={`/events/${id}/live`}>Live dashboard</Link>}
           {user.role === 'coordinator' && <Link className="btn" to={`/review?event_id=${id}`}>Review registrations</Link>}
+          {owner && e.status !== 'draft' && <Link className="btn" to={`/events/${id}/tickets`}>Tickets & QR codes</Link>}
           {owner && e.status === 'draft' && (
             <button className="primary" disabled={act.busy} onClick={() => doAction(() => api.post(`/events/${id}/publish`),
               'Publish this event? Attendees will be able to see it and register.')}>Publish</button>

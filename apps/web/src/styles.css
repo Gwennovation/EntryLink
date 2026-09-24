@@ -188,3 +188,22 @@ dl.kv dd { margin: 0; }
 .scan-result .msg { font-size: 17px; font-weight: 600; margin-top: 4px; }
 .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); display: inline-block; animation: pulse 1.6s infinite; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgb(17 122 69 / 50%); } 70% { box-shadow: 0 0 0 8px rgb(17 122 69 / 0%); } 100% { box-shadow: 0 0 0 0 rgb(17 122 69 / 0%); } }
+
+/* ---- Ticket roster & printable sheet ---- */
+tr.selected td { background: var(--brand-soft); }
+.qr-large { width: 100%; max-width: 280px; margin: 0 auto; display: block; background: #fff; border-radius: 8px; border: 1px solid var(--border); }
+.ticket-sheet { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.ticket-card { background: #fff; color: #16181d; border: 1px dashed #9aa3b2; border-radius: 12px; padding: 16px; text-align: center; break-inside: avoid; }
+.ticket-card img { width: 180px; height: 180px; display: block; margin: 8px auto; }
+.ticket-event { font-weight: 700; font-size: 14px; }
+.ticket-code { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 17px; font-weight: 700; letter-spacing: 2px; }
+.ticket-name { font-weight: 600; margin-top: 4px; }
+.ticket-meta { font-size: 12px; color: #5d6573; }
+
+@media print {
+  body { background: #fff; }
+  .sidebar, .no-print { display: none !important; }
+  .shell { display: block; }
+  main { padding: 0; max-width: none; }
+  .ticket-sheet { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+}

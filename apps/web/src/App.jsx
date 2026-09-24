@@ -8,7 +8,9 @@ import Review from './pages/coordinator/Review.jsx';
 import RegistrationDetail from './pages/coordinator/RegistrationDetail.jsx';
 import EventDetail from './pages/events/EventDetail.jsx';
 import EventLive from './pages/events/EventLive.jsx';
+import EventTickets from './pages/events/EventTickets.jsx';
 import Events from './pages/events/Events.jsx';
+import TicketSheet from './pages/events/TicketSheet.jsx';
 import Gate from './pages/gate/Gate.jsx';
 import Login from './pages/Login.jsx';
 
@@ -33,6 +35,8 @@ function AppRoutes() {
         <Route path="events" element={<Allow roles={['admin', 'organizer', 'coordinator']}><Events /></Allow>} />
         <Route path="events/:id" element={<Allow roles={['admin', 'organizer', 'coordinator']}><EventDetail /></Allow>} />
         <Route path="events/:id/live" element={<Allow roles={['organizer', 'coordinator']}><EventLive /></Allow>} />
+        <Route path="events/:id/tickets" element={<Allow roles={['organizer']}><EventTickets /></Allow>} />
+        <Route path="events/:id/tickets/print" element={<Allow roles={['organizer']}><TicketSheet /></Allow>} />
         <Route path="review" element={<Allow roles={['coordinator']}><Review /></Allow>} />
         <Route path="registrations/:id" element={<Allow roles={['coordinator', 'organizer']}><RegistrationDetail /></Allow>} />
         <Route path="gate" element={<Allow roles={['gate_staff']}><Gate /></Allow>} />

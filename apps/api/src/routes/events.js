@@ -8,6 +8,7 @@ import { authenticate, requireRole } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { openLiveStream } from '../services/live.js';
 import { eventReport, eventStats, recentEntries, reportToCsv } from '../services/stats.js';
+import { eventTicketRoster, eventTicketsWithQr, eventTicketWithQr } from '../services/tickets.js';
 
 export const router = Router();
 
@@ -192,6 +193,41 @@ router.delete('/:id/ticket-types/:typeId', authenticate(), requireRole('organize
   if (!rowCount) throw notFound('Ticket type');
   await publish('ticket_type.deleted', { actorId: req.user.id, entityType: 'ticket_type', entityId: req.params.typeId, eventId: event.id });
   res.status(204).end();
+});
+
+// ---- Ticket roster & backup QR codes (owning organizer) ----------------------------------------
+// Fallback for when an attendee didn't receive their ticket: the organizer can view, download or
+// print the same QR. A QR is a bearer credential, so every view and export is audited.
+
+const rosterSchema = z.object({
+  status: z.enum(['issued', 'checked_in', 'cancelled', 'expired']).optional(),
+  q: z.string().trim().max(100).optional().transform((v) => v || undefined),
+});
+
+router.get('/:id/tickets', authenticate(), requireRole('organizer'), validate(rosterSchema, 'query'), async (req, res) => {
+  const event = await loadOwnedEvent(req);
+  res.json(await eventTicketRoster(event.id, req.valid.query));
+});
+
+router.get('/:id/tickets/qr-sheet', authenticate(), requireRole('organizer'), validate(rosterSchema, 'query'), async (req, res) => {
+  const event = await loadOwnedEvent(req);
+  const result = await eventTicketsWithQr(event.id, req.valid.query);
+  await publish('ticket.qr_exported', {
+    actorId: req.user.id, entityType: 'event', entityId: event.id, eventId: event.id,
+    data: { count: result.tickets.length, filters: req.valid.query, short_codes: result.tickets.map((t) => t.short_code) },
+  });
+  res.json(result);
+});
+
+router.get('/:id/tickets/:ticketId/qr', authenticate(), requireRole('organizer'), async (req, res) => {
+  const event = await loadOwnedEvent(req);
+  const ticket = await eventTicketWithQr(event.id, req.params.ticketId);
+  if (!ticket) throw notFound('Ticket');
+  await publish('ticket.qr_viewed', {
+    actorId: req.user.id, entityType: 'ticket', entityId: ticket.id, eventId: event.id,
+    data: { short_code: ticket.short_code, attendee_id: ticket.attendee_id },
+  });
+  res.json({ ticket });
 });
 
 // ---- Dashboards & reports ----------------------------------------------------------------------

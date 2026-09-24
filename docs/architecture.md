@@ -78,6 +78,7 @@ subscribe interface stays the same.
 | `ticket.scan_rejected` | checkin | audit, live |
 | `ticket.cancelled` | registrations (on cancel) | audit, live |
 | `comment.created` | routes/registrations | audit, notification |
+| `ticket.qr_viewed` / `ticket.qr_exported` | routes/events (organizer backup copies) | audit, live |
 | `event.*`, `ticket_type.*`, `user.*`, `report.generated` | routes | audit |
 
 \* `approved` itself sends no notification; `ticket.issued` does.
@@ -107,7 +108,8 @@ Ticket lifecycle: `issued → checked_in | cancelled | expired`.
 | NFR-002 / FR-014 RBAC | `requireRole()` on every route, plus ownership checks (an organizer sees only their own events; an attendee sees only their own registrations). The user is reloaded on every request, so deactivation takes effect immediately. |
 | Separation of duties (§2.6) | Only coordinators approve. Only gate staff scan. Admins can do neither. Covered by `test/rbac.test.js`. |
 | NFR-003 immutable audit | A DB trigger blocks UPDATE, DELETE and TRUNCATE on `audit_logs`. The SHA-256 hash chain makes out-of-band edits detectable via `GET /api/audit/verify`. |
-| QR forgery | HMAC-SHA256 signed payload with a per-ticket 128-bit secret. Staff see only the short code. |
+| QR forgery | HMAC-SHA256 signed payload with a per-ticket 128-bit secret. Coordinators and gate staff see only the short code. |
+| Organizer QR access | Only the owning organizer can view or print attendee QRs (the backup delivery path). Each view or export is audited with the ticket codes involved. |
 | Uploads | Allow-listed MIME types, 5 MB limit, random server-side filenames, served only to authorized users. |
 | CSV injection | Report cells that start with `= + - @` are prefixed with `'`. |
 

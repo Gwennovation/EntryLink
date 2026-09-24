@@ -110,6 +110,7 @@ and immutability, and a role-based access matrix (including separation of duties
 | FR-011 user admin | `routes/users.js` · web Users |
 | FR-012 comments | `/registrations/:id/comments` · both clients |
 | FR-013 end-of-event report | `/events/:id/report[?format=csv]` |
+| Backup ticket delivery | Organizer *Tickets & QR codes* page: view, download, or print any attendee's QR (audited) |
 | FR-014 / NFR-002 RBAC | `requireRole()` + ownership checks · `test/rbac.test.js` |
 | NFR-005 scan < 2s | asserted in `test/flow.test.js` |
 | NFR-009 onboarding | this README + `docs/` |
