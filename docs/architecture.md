@@ -65,9 +65,24 @@ is set, the transport sends nothing and records the attempt as `not_configured` 
 log. Going live means implementing one transport function; nothing that publishes events changes.
 An SMS provider would be another subscriber like it.
 
-**Scaling note:** the bus is in-process. If the API runs as several instances, swap `lib/bus.js`
-for Redis pub/sub or a queue, so SSE clients on every instance get updates. The publish and
-subscribe interface stays the same.
+**Multiple instances (Vercel):** the bus is in-process, so each API instance only sees its own
+events. Everything that must be cross-instance is backed by the database instead. Notifications and
+audit entries are written in the request that caused them. The live dashboard stream also polls
+`entry_logs` and the stats every `LIVE_POLL_MS` (3 s), so a scan on any instance reaches every
+dashboard. Streams end after `LIVE_MAX_SECONDS` (270 s, under Vercel's 300 s limit) and the browser
+reconnects.
+
+**Deployment (Vercel):**
+
+```
+Browser ──▶ https://<project>.vercel.app
+              ├─ /api/*  ──▶ Vercel Function api/index.js ──▶ Express app ──▶ Neon Postgres
+              │                                                        └──▶ Vercel Blob (private receipts)
+              └─ /*      ──▶ apps/web/dist (static, SPA fallback to index.html)
+```
+
+`bootstrap()` runs once per function instance: connect, migrate (under an advisory lock, so parallel
+cold starts are safe), register subscribers, and, if `SEED_DEMO=true`, claim the one-time demo seed.
 
 ### Domain events
 
@@ -119,7 +134,7 @@ Ticket lifecycle: `issued → checked_in | cancelled | expired`.
 | Organizer QR access | Only the owning organizer can view or print attendee QRs (the backup delivery path). Each view or export is audited with the ticket codes involved. |
 | Public event page | `/api/public/events/:id` is the only unauthenticated data endpoint. It returns published or closed events only, with no internal ids or attendee data. |
 | Deep-link redirects | After sign-in the app follows `next` only when it's an in-app path (`/…`, not `//…`), so a crafted link can't send users off-app. |
-| Uploads | 5 MB limit, random server-side filenames, and the file's first bytes must match JPG/PNG/WEBP/HEIC/PDF; the detected type is stored. Served only to authorized users, with `nosniff`. Images get a `sandbox` CSP and PDFs download, so an opened proof can't run scripts as our site. |
+| Uploads | 4 MB limit (Vercel request bodies max out at 4.5 MB), random storage keys, private Vercel Blob in production, and the file's first bytes must match JPG/PNG/WEBP/HEIC/PDF; the detected type is stored. Served only to authorized users, with `nosniff`. Images get a `sandbox` CSP and PDFs download, so an opened proof can't run scripts as our site. |
 | Web CSP | Production builds include a Content Security Policy: own scripts only, and requests to the same origin only. |
 | Production guards | The API refuses to start in production without `JWT_SECRET`, `QR_SECRET` and an explicit `CORS_ORIGINS`. |
 | CSV injection | Report cells that start with `= + - @` are prefixed with `'`. |

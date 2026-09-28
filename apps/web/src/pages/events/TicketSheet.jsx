@@ -1,6 +1,6 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../../api.js';
-import { ErrorNote, useLoad } from '../../components/ui.jsx';
+import { ErrorNote, Logo, useLoad } from '../../components/ui.jsx';
 import { dateRange } from '../../format.js';
 
 /** Printable sheet of QR tickets (one card per attendee). Sidebar and controls are hidden when printing. */
@@ -28,6 +28,7 @@ export default function TicketSheet() {
       <div className="ticket-sheet">
         {tickets.map((t) => (
           <div className="ticket-card" key={t.id}>
+            <div className="ticket-logo"><Logo height={20} variant="light" /></div>
             <div className="ticket-event">{t.event_title}</div>
             <img src={t.qr_image} alt={`QR ticket ${t.short_code}`} />
             <div className="ticket-code">{t.short_code}</div>

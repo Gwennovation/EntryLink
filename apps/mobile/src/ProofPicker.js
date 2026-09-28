@@ -3,14 +3,14 @@ import * as ImagePicker from 'expo-image-picker';
 import { Image, Text, View } from 'react-native';
 import { Button, useTheme } from './ui';
 
-const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_BYTES = 4 * 1024 * 1024; // matches the API limit (Vercel caps request bodies at 4.5 MB)
 
 /** Lets the attendee attach a receipt screenshot/photo or a PDF. `value` is { uri, name, mimeType, file? }. */
 export default function ProofPicker({ value, onChange, onError }) {
   const { colors, s } = useTheme();
   const accept = (asset, fallbackName) => {
     if (asset.fileSize > MAX_BYTES || asset.size > MAX_BYTES) {
-      onError(new Error('That file is larger than 5 MB. Try a screenshot instead of a full-resolution photo.'));
+      onError(new Error('That file is larger than 4 MB. Try a screenshot instead of a full-resolution photo.'));
       return;
     }
     onError(null);
@@ -49,7 +49,7 @@ export default function ProofPicker({ value, onChange, onError }) {
           <Button title="Choose PDF" variant="secondary" onPress={pickPdf} style={{ flex: 1 }} />
         </View>
       )}
-      <Text style={s.small}>A screenshot of your bank or e-wallet receipt showing the reference number. Max 5 MB.</Text>
+      <Text style={s.small}>A screenshot of your bank or e-wallet receipt showing the reference number. Max 4 MB.</Text>
     </View>
   );
 }

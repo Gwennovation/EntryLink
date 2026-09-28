@@ -33,7 +33,7 @@ export default function EventLive() {
       const a = JSON.parse(e.data);
       if (a.name === 'ticket.checked_in' || a.name === 'ticket.scan_rejected') {
         setFeed((f) => [{
-          key: `${a.name}${a.occurred_at}`, at: a.occurred_at, result: a.name === 'ticket.checked_in' ? 'accepted' : a.data.result,
+          key: a.id ? `e${a.id}` : `${a.name}${a.occurred_at}`, at: a.occurred_at, result: a.name === 'ticket.checked_in' ? 'accepted' : a.data.result,
           who: a.data.attendee_name, code: a.data.short_code, method: a.data.method,
         }, ...f].slice(0, 30));
       }

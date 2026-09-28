@@ -12,7 +12,8 @@ const normalize = (r) => ({ rows: r.rows, rowCount: r.rowCount ?? r.affectedRows
 
 async function createPgDriver(url) {
   const { default: pg } = await import('pg');
-  const pool = new pg.Pool({ connectionString: url });
+  // Serverless instances each hold their own pool, so keep it small (use Neon's pooled URL).
+  const pool = new pg.Pool({ connectionString: url, max: process.env.VERCEL ? 3 : 10, idleTimeoutMillis: 10_000 });
   return {
     name: 'postgres',
     query: async (sql, params) => normalize(await pool.query(sql, params)),
@@ -21,7 +22,10 @@ async function createPgDriver(url) {
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
-        const result = await fn({ query: async (s, p) => normalize(await client.query(s, p)) });
+        const result = await fn({
+          query: async (s, p) => normalize(await client.query(s, p)),
+          exec: async (s) => { await client.query(s); },
+        });
         await client.query('COMMIT');
         return result;
       } catch (err) {
@@ -44,7 +48,7 @@ async function createPgliteDriver(dataDir) {
     name: dataDir === 'memory://' ? 'pglite (in-memory)' : `pglite (${dataDir})`,
     query: async (sql, params) => normalize(await pglite.query(sql, params)),
     exec: async (sql) => { await pglite.exec(sql); },
-    tx: (fn) => pglite.transaction((t) => fn({ query: async (s, p) => normalize(await t.query(s, p)) })),
+    tx: (fn) => pglite.transaction((t) => fn({ query: async (s, p) => normalize(await t.query(s, p)), exec: (s) => t.exec(s) })),
     close: () => pglite.close(),
   };
 }
@@ -76,14 +80,23 @@ export async function one(sql, params) {
   return rows[0] ?? null;
 }
 
+const MIGRATION_LOCK = 4_212_002;
+
+/**
+ * Apply pending migrations in one transaction under an advisory lock, so several instances
+ * starting at once (serverless cold starts) can't apply the same migration twice.
+ */
 async function migrate() {
   const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'migrations');
-  await current().exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
-    name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())`);
-  const applied = new Set((await query('SELECT name FROM schema_migrations')).rows.map((r) => r.name));
-  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()) {
-    if (applied.has(file)) continue;
-    await current().exec(fs.readFileSync(path.join(dir, file), 'utf8'));
-    await query('INSERT INTO schema_migrations (name) VALUES ($1)', [file]);
-  }
+  await tx(async (q) => {
+    await q.query('SELECT pg_advisory_xact_lock($1)', [MIGRATION_LOCK]);
+    await q.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
+      name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())`);
+    const applied = new Set((await q.query('SELECT name FROM schema_migrations')).rows.map((r) => r.name));
+    for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()) {
+      if (applied.has(file)) continue;
+      await q.exec(fs.readFileSync(path.join(dir, file), 'utf8'));
+      await q.query('INSERT INTO schema_migrations (name) VALUES ($1)', [file]);
+    }
+  });
 }

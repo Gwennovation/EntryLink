@@ -146,6 +146,70 @@ These are API integration tests on an in-memory database. They cover the full re
 approve → ticket → scan → duplicate flow, forged QR codes, capacity limits, reports, the audit chain
 and immutability, and a role-based access matrix (including separation of duties).
 
+## Deploying to Vercel
+
+The web app and the API deploy together as **one Vercel project** (`vercel.json` at the repo root).
+The browser sees one site: pages are served from `apps/web/dist`, and every `/api/*` request goes to a
+Vercel Function (`api/index.js`) running the Express API. Data lives in **Neon Postgres**, and payment
+receipts in a **private Vercel Blob** store. Both have free tiers and are added from Vercel's Storage tab.
+
+### One-time setup (about 15 minutes)
+
+1. **Create the project.** Sign in at [vercel.com](https://vercel.com) with GitHub, choose **Add New → Project**,
+   and import `Gwennovation/EntryLink`. Leave **Root Directory** as the repository root and **Framework** as
+   "Other"; `vercel.json` supplies the build settings. Don't deploy yet, or let the first deploy fail; that's fine.
+2. **Add the database.** In the project, go to **Storage → Create → Neon (Postgres)**, choose the **Singapore**
+   region (closest to Manila, and where the API runs), and connect it to *Production* and *Preview*. This adds
+   `DATABASE_URL` for you.
+3. **Add receipt storage.** Go to **Storage → Create → Blob**, choose **Private** access and the **Singapore**
+   region, and connect it to the project. This adds `BLOB_STORE_ID` and the credentials the API needs.
+4. **Add environment variables** (**Settings → Environment Variables**, for Production and Preview):
+
+   | Name | Value | Why |
+   |---|---|---|
+   | `JWT_SECRET` | output of `openssl rand -base64 48` | Signs sign-in sessions. The API refuses to start without it. |
+   | `QR_SECRET` | a *different* `openssl rand -base64 48` | Signs QR tickets |
+   | `NODEJS_HELPERS` | `0` | Lets Express read request bodies itself |
+   | `SEED_DEMO` | `true` | Creates the demo accounts and events on first start (only once) |
+
+   Generate each secret in your terminal and paste it straight into Vercel. Don't commit it or post it anywhere.
+   You don't need to set `CORS_ORIGINS`, `PUBLIC_WEB_URL` or `TRUST_PROXY`: on Vercel the API derives them
+   from the deployment's own domain.
+5. **Deploy.** Go to **Deployments → Redeploy** (or push to `main`). Open `https://<your-project>.vercel.app/api/health`.
+   You should see `{"ok":true,…}`. The first request also creates the tables and demo data.
+6. **Sign in** at `https://<your-project>.vercel.app` with the demo accounts above.
+
+After that, every push to `main` deploys to production, and every pull request gets its own preview URL.
+
+### What's different on Vercel
+
+- **Receipts** are capped at **4 MB** (Vercel's request limit is 4.5 MB). Phone screenshots are well under that.
+- **The live dashboard** reconnects on its own about every 4½ minutes. Vercel ends long requests at 5 minutes,
+  so the stream hands off first. It checks the database every 3 seconds, so it shows scans handled by any server instance.
+- **Rate limits** are counted per server instance. That's fine at this scale; use a shared store such as Upstash Redis if traffic grows.
+- **Sign-in stays on one domain.** Keep the web app and API on the same Vercel project. The session cookie
+  is `SameSite=Strict`, so a separately hosted API wouldn't receive it.
+
+### The mobile app against the live site
+
+The phone app needs to know where the API is. Point it at your Vercel URL:
+
+```bash
+cd apps/mobile && EXPO_PUBLIC_API_URL="https://<your-project>.vercel.app/api" npx expo start
+```
+
+Scan the QR code with **Expo Go**. The app now uses the live database, with the same accounts as the website.
+
+To hand out an **installable app** instead of Expo Go, build it with EAS (free Expo account):
+
+```bash
+cd apps/mobile && npx eas-cli@latest build --platform android --profile preview
+```
+
+Set `EXPO_PUBLIC_API_URL` as an EAS environment variable (or in `eas.json`) before building. The build produces
+an APK you can install on Android phones. iPhones need an Apple Developer account ($99/year) for TestFlight.
+Installed builds also open poster links (`entrylink://event/…`) directly in the app.
+
 ## Deploying securely
 
 No system is unhackable, but these settings close the common holes. The API refuses to start in

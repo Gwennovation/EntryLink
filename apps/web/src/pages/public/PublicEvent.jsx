@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../../api.js';
-import { useLoad } from '../../components/ui.jsx';
+import { Logo, useLoad } from '../../components/ui.jsx';
 import { dateRange, peso } from '../../format.js';
 
 // Where "Register in the app" points. Production app: entrylink://  ·  Expo Go during development:
@@ -22,7 +22,7 @@ export default function PublicEvent() {
   return (
     <div className="public-wrap">
       <div className="public-card">
-        <div className="brand" style={{ padding: 0 }}><span className="brand-mark">EL</span>EntryLink</div>
+        <Logo height={32} />
         {loading && <div className="empty">Loading event…</div>}
         {error && (
           <div className="stack">

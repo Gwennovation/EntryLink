@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../auth.jsx';
-import { ErrorNote, useAction } from '../components/ui.jsx';
+import { ErrorNote, Logo, useAction } from '../components/ui.jsx';
 
 // Seeded demo accounts (see apps/api/src/db/seed.js). Only shown in development builds.
 const DEMO = [
@@ -24,7 +24,7 @@ export default function Login() {
   return (
     <div className="login-wrap">
       <form className="card login-card stack" onSubmit={submit}>
-        <div className="brand" style={{ padding: 0 }}><span className="brand-mark">EL</span>EntryLink</div>
+        <Logo height={34} />
         <div>
           <h1>Staff sign in</h1>
           <p className="muted" style={{ margin: '4px 0 0' }}>Event registration & entry management</p>

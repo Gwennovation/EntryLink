@@ -6,7 +6,7 @@
   --input-border: #7d8596;      /* form fields: ≥3:1 against surfaces (WCAG 1.4.11) */
   --text: #16181d;
   --muted: #5d6573;
-  --brand: #3b3fd8;
+  --brand: #5c5fc4;            /* logo purple, one shade deeper so text passes 4.5:1 on tints */
   --brand-ink: #ffffff;
   --brand-soft: #ecedfd;
   --ok: #117a45;
@@ -36,7 +36,7 @@
     --input-border: #626b7b;
     --text: #e8eaef;
     --muted: #9aa3b2;
-    --brand: #8a8ef3;
+    --brand: #a5a7ff;           /* the logo's dark-mode purple */
     --brand-ink: #0f1115;
     --brand-soft: #23264a;
     --ok: #4ad38b;
@@ -65,8 +65,7 @@ code, .mono { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size:
 /* ---- Layout ---- */
 .shell { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
 .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh; }
-.brand { font-weight: 700; font-size: 17px; padding: 0 10px 18px; display: flex; align-items: center; gap: 8px; }
-.brand-mark { width: 26px; height: 26px; border-radius: 7px; background: var(--brand); color: var(--brand-ink); display: grid; place-items: center; font-size: 13px; }
+.brand { padding: 0 10px 18px; display: flex; align-items: center; }
 .nav-link { display: block; padding: 8px 10px; border-radius: 8px; color: var(--muted); font-weight: 500; }
 .nav-link:hover { background: var(--surface-2); text-decoration: none; color: var(--text); }
 .nav-link.active { background: var(--brand-soft); color: var(--brand); }
@@ -229,6 +228,8 @@ tr.selected td { background: var(--brand-soft); }
 
 /* ---- Event poster ---- */
 .poster { background: #fff; color: #16181d; max-width: 560px; margin: 0 auto; padding: 40px 32px; border-radius: 16px; border: 1px solid var(--border); text-align: center; }
+.poster-logo, .ticket-logo { display: flex; justify-content: center; margin-bottom: 14px; }
+.ticket-logo { margin-bottom: 6px; }
 .poster-kicker { text-transform: uppercase; letter-spacing: 0.12em; font-size: 12px; font-weight: 700; color: #3b3fd8; }
 .poster-title { font-size: 32px; font-weight: 800; line-height: 1.15; margin: 8px 0 12px; letter-spacing: -0.02em; }
 .poster-meta { font-size: 15px; color: #5d6573; }

@@ -61,3 +61,14 @@ export function useAction() {
   };
   return { busy, error, run, setError };
 }
+
+/** The EntryLink wordmark; swaps to the light-on-dark version when the system is in dark mode. */
+export function Logo({ height = 28, variant }) {
+  if (variant) return <img src={`/logo-${variant}.svg`} alt="EntryLink" style={{ height, width: 'auto', display: 'block' }} />;
+  return (
+    <picture>
+      <source srcSet="/logo-dark.svg" media="(prefers-color-scheme: dark)" />
+      <img src="/logo-light.svg" alt="EntryLink" style={{ height, width: 'auto', display: 'block' }} />
+    </picture>
+  );
+}

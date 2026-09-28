@@ -1,0 +1,7 @@
+# Not needed to build or run the web app + API on Vercel
+apps/mobile
+**/node_modules
+**/.data
+**/dist
+tasks
+.github

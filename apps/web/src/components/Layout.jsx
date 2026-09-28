@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { ROLE_LABEL, useAuth } from '../auth.jsx';
+import { Logo } from './ui.jsx';
 
 export const NAV = {
   admin: [['/users', 'Users & roles'], ['/audit', 'Audit log'], ['/notifications', 'Notification log'], ['/events', 'Events']],
@@ -13,7 +14,7 @@ export default function Layout() {
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="brand"><span className="brand-mark">EL</span>EntryLink</div>
+        <div className="brand"><Logo height={30} /></div>
         {(NAV[user.role] ?? []).map(([to, label]) => (
           <NavLink key={to} to={to} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>{label}</NavLink>
         ))}

@@ -1,12 +1,12 @@
 // Registration, proof-of-payment, review workflow and comments (FR-001..003, FR-012).
-import fs from 'node:fs';
 import { Router } from 'express';
 import { z } from 'zod';
 import { one, query } from '../db/index.js';
 import { publish } from '../lib/bus.js';
 import { forbidden, notFound } from '../lib/errors.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
-import { discardUpload, proofFilePath, proofUpload } from '../middleware/upload.js';
+import { storage } from '../lib/storage.js';
+import { discardUpload, proofUpload } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
 import {
   approveRegistration, cancelRegistration, getRegistrationFor, rejectRegistration,
@@ -128,8 +128,8 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/proof', async (req, res) => {
   const reg = await getRegistrationFor(req.user, req.params.id);
   if (!reg.proof_path) throw notFound('Proof of payment');
-  const file = proofFilePath(reg.proof_path);
-  if (!fs.existsSync(file)) throw notFound('Proof of payment file');
+  const file = await storage.open(reg.proof_path);
+  if (!file) throw notFound('Proof of payment file');
   res.set('Content-Type', reg.proof_mime);
   res.set('Cache-Control', 'private, no-store');
   // If someone opens this URL directly, nothing in the file can run as our site: images render in a
@@ -140,8 +140,8 @@ router.get('/:id/proof', async (req, res) => {
     res.set('Content-Disposition', `inline; filename="proof-${reg.id}"`);
     res.set('Content-Security-Policy', "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox");
   }
-  // Uploads live under .data/, and send() refuses dot-directories unless told otherwise.
-  res.sendFile(file, { dotfiles: 'allow' });
+  file.on('error', () => res.destroy());
+  file.pipe(res);
 });
 
 const noteSchema = (required) => z.object({

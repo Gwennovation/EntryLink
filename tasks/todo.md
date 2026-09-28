@@ -130,3 +130,24 @@ entrylink/
   - Mobile in dark and light: the events-list badges, "You're registered" on the event screen, bookings with event dates and View ticket, and payment instructions on the revision screen.
 - Not verified: gate sounds (the browser pane can't play audio to me), the live camera, and the native iOS/Android dark mode (checked via Expo web only).
 - Found during checks: a stale web dev server had lost its /api proxy (restart fixed it, no code change). The dark-mode header hairline was fixed with `headerShadowVisible: false`.
+
+---
+
+# Vercel deployment (2026-09-29): web + API in one Vercel project
+
+Decisions: everything on Vercel (API as a Vercel Function), Neon Postgres + private Vercel Blob from Vercel's Storage tab, seed demo data.
+
+- [x] Root `vercel.json`: install/build both apps, serve `apps/web/dist`, `/api/*` → function, SPA fallback, security headers (HSTS, frame, referrer, camera permissions)
+- [x] `api/index.js` function wrapping the Express app (initialised once per instance)
+- [x] Receipt storage: private Vercel Blob in production, local disk in dev/tests; upload cap 4 MB (Vercel body limit 4.5 MB)
+- [x] Live dashboard works across function instances (DB polling) and closes before the 300 s limit (EventSource reconnects)
+- [x] Migrations take an advisory lock (parallel cold starts)
+- [x] Config from Vercel system env: DATABASE_URL/POSTGRES_URL, CORS origins, PUBLIC_WEB_URL, TRUST_PROXY
+- [x] `SEED_DEMO=true` seeds demo data on first boot (no local credentials needed)
+- [x] Tests for storage, cross-instance live feed, migration lock; simulate the function locally
+- [x] Deploy guide in README; the user connects GitHub + Storage in the Vercel dashboard
+- [x] Brand logo + favicons (user request mid-task): web favicons (light/dark), apple-touch icon, manifest, logo in sidebar/login/public page/poster/printed tickets; mobile app icon, Android adaptive layers, splash, sign-in logo; brand tokens moved to the logo purples (contrast re-checked, all pass).
+
+## Review
+- 88/88 API tests (6 new: cross-instance live feed + stream hand-off, Vercel function routing, one-time seed under concurrent boots, 4 MB cap, stored proof served from storage).
+- Not verifiable here: a real Vercel deploy (needs the user's account). First deploy may surface a platform detail; `vercel logs` will show it.

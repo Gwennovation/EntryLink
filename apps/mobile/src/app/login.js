@@ -1,6 +1,6 @@
 import { Link, Redirect, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { afterSignIn, useAuth } from '../auth';
 import { Button, ErrorText, Field, useTheme } from '../ui';
 
@@ -25,10 +25,13 @@ export default function Login() {
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={[s.content, { flexGrow: 1, justifyContent: 'center', paddingTop: 64 }]} keyboardShouldPersistTaps="handled">
         <View style={{ alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ color: colors.onBrand, fontWeight: '800', fontSize: 22 }}>EL</Text>
+          {/* Brand mark + wordmark, drawn natively so it follows light/dark mode. */}
+          <View style={[s.row, { gap: 12 }]} accessible accessibilityRole="header" accessibilityLabel="EntryLink">
+            <Image source={require('../../assets/brand-mark.png')} style={{ width: 52, height: 52 }} />
+            <Text style={{ fontSize: 30, fontWeight: '800', letterSpacing: -0.8, color: colors.text }}>
+              Entry<Text style={{ color: colors.brand }}>Link</Text>
+            </Text>
           </View>
-          <Text style={s.h1}>EntryLink</Text>
           <Text style={s.muted}>Register for events and keep your tickets in one place.</Text>
         </View>
         <ErrorText error={error} />

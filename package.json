@@ -11,5 +11,9 @@
     "mobile": "npm --prefix apps/mobile start",
     "test": "npm --prefix apps/api test",
     "build:web": "npm --prefix apps/web run build"
+  },
+  "type": "module",
+  "engines": {
+    "node": "24.x"
   }
 }

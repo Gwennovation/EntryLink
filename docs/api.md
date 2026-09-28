@@ -83,7 +83,7 @@ Roles: `admin`, `organizer`, `coordinator`, `gate_staff`, `attendee`.
 
 | Method | Path | Role | Notes |
 |---|---|---|---|
-| POST | `/registrations` | attendee | **multipart**: `event_id`, `ticket_type_id`, `payment_reference`, `proof` (file). Proof and reference are required for paid tickets. Accepts JPG, PNG, WEBP, HEIC or PDF up to 5 MB, checked by the file's actual contents, not its name or declared type. |
+| POST | `/registrations` | attendee | **multipart**: `event_id`, `ticket_type_id`, `payment_reference`, `proof` (file). Proof and reference are required for paid tickets. Accepts JPG, PNG, WEBP, HEIC or PDF up to 4 MB, checked by the file's actual contents, not its name or declared type. |
 | GET | `/registrations/mine` | attendee | |
 | PUT | `/registrations/:id/resubmit` | attendee (owner) | **multipart**: `payment_reference?`, `proof?`. Only from `revision_requested`. Increments `version`. |
 | POST | `/registrations/:id/cancel` | attendee (owner) | From pending, revision_requested, or approved-but-unused |

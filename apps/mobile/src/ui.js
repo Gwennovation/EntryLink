@@ -9,7 +9,7 @@ const palettes = {
     bg: '#f5f6f8', surface: '#ffffff', border: '#e2e5ea',
     inputBorder: '#7d8596', placeholder: '#6b7280',
     text: '#16181d', muted: '#5d6573', mutedSoft: '#eef0f3',
-    brand: '#3b3fd8', brandSoft: '#ecedfd', onBrand: '#ffffff',
+    brand: '#5c5fc4', brandSoft: '#ecedfd', onBrand: '#ffffff', // logo purple, deep enough for 4.5:1
     ok: '#117a45', okSoft: '#e3f5ea', warn: '#9a5b00', warnSoft: '#fdf1dc',
     bad: '#b42318', badSoft: '#fde8e6', info: '#175cd3', infoSoft: '#e4eefc',
   },
@@ -17,7 +17,7 @@ const palettes = {
     bg: '#0f1115', surface: '#171a21', border: '#2b303b',
     inputBorder: '#626b7b', placeholder: '#8b93a1',
     text: '#e8eaef', muted: '#9aa3b2', mutedSoft: '#252a33',
-    brand: '#8a8ef3', brandSoft: '#23264a', onBrand: '#0f1115',
+    brand: '#a5a7ff', brandSoft: '#23264a', onBrand: '#0f1115', // the logo's dark-mode purple
     ok: '#4ad38b', okSoft: '#143323', warn: '#f2b653', warnSoft: '#3a2b12',
     bad: '#ff7b6e', badSoft: '#3d1a17', info: '#7cb0ff', infoSoft: '#172a47',
   },

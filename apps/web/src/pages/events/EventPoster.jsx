@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../../api.js';
-import { ErrorNote, useLoad } from '../../components/ui.jsx';
+import { ErrorNote, Logo, useLoad } from '../../components/ui.jsx';
 import { dateRange } from '../../format.js';
 
 /** Printable poster with one QR that takes people to the event's public registration page. */
@@ -37,6 +37,7 @@ export default function EventPoster() {
 
       {e && p && (
         <div className="poster">
+          <div className="poster-logo"><Logo height={40} variant="light" /></div>
           <div className="poster-kicker">You’re invited</div>
           <div className="poster-title">{e.title}</div>
           <div className="poster-meta">{dateRange(e.starts_at, e.ends_at)}</div>

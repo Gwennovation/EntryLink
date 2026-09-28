@@ -1,26 +1,16 @@
-import crypto from 'node:crypto';
-import fs from 'node:fs';
-import path from 'node:path';
 import multer from 'multer';
 import { config } from '../config.js';
 import { badRequest } from '../lib/errors.js';
+import { storage } from '../lib/storage.js';
 
-const ALLOWED = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/heic': '.heic', 'application/pdf': '.pdf' };
+const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf']);
 
-fs.mkdirSync(config.uploadDir, { recursive: true });
-
-// Local disk in the prototype; swap the storage engine for S3/GCS in production (spec §2.5).
-const storage = multer.diskStorage({
-  destination: config.uploadDir,
-  // Random names: never trust (or expose) the client's filename on disk.
-  filename: (_req, file, cb) => cb(null, `${crypto.randomUUID()}${ALLOWED[file.mimetype]}`),
-});
-
+// Held in memory (max 4 MB) so the contents can be checked before anything is stored.
 const uploader = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: config.maxUploadBytes, files: 1 },
   fileFilter: (_req, file, cb) => {
-    if (ALLOWED[file.mimetype]) return cb(null, true);
+    if (ALLOWED.has(file.mimetype)) return cb(null, true);
     cb(badRequest('proof: upload a JPG, PNG, WEBP, HEIC image or a PDF.'));
   },
 });
@@ -38,20 +28,11 @@ export function sniffType(head) {
   return null;
 }
 
-async function readHead(file) {
-  const handle = await fs.promises.open(file, 'r');
-  try {
-    const { buffer, bytesRead } = await handle.read(Buffer.alloc(16), 0, 16, 0);
-    return buffer.subarray(0, bytesRead);
-  } finally {
-    await handle.close();
-  }
-}
-
 /**
  * Accepts an optional single `proof` file and turns multer errors into clear 400s.
- * The browser-reported type is only a first filter: the saved file's actual bytes must match an
- * allowed format, and that detected type is what gets stored and served back.
+ * The browser-reported type is only a first filter: the file's actual bytes must match an allowed
+ * format, and that detected type is what gets stored and served back. The stored key is exposed
+ * as req.file.filename.
  */
 export function proofUpload(req, res, next) {
   uploader.single('proof')(req, res, async (err) => {
@@ -62,23 +43,19 @@ export function proofUpload(req, res, next) {
     }
     if (!req.file) return next();
     try {
-      const detected = sniffType(await readHead(req.file.path));
-      if (!detected) {
-        discardUpload(req.file);
-        return next(badRequest("proof: that file isn't a valid JPG, PNG, WEBP, HEIC image or PDF."));
-      }
+      const detected = sniffType(req.file.buffer.subarray(0, 16));
+      if (!detected) return next(badRequest("proof: that file isn't a valid JPG, PNG, WEBP, HEIC image or PDF."));
       req.file.mimetype = detected;
+      req.file.filename = await storage.save(req.file.buffer, detected);
+      req.file.buffer = null; // done with it; don't keep 4 MB alive for the rest of the request
       next();
     } catch (e) {
-      discardUpload(req.file);
       next(e);
     }
   });
 }
 
-export const proofFilePath = (name) => path.join(config.uploadDir, path.basename(name));
-
-/** Remove an uploaded file when the request that carried it fails validation. */
+/** Remove a stored upload when the request that carried it fails validation. */
 export function discardUpload(file) {
-  if (file) fs.promises.unlink(file.path).catch(() => {});
+  if (file?.filename) storage.remove(file.filename);
 }
