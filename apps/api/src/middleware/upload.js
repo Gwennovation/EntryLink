@@ -25,13 +25,54 @@ const uploader = multer({
   },
 });
 
-/** Accepts an optional single `proof` file and turns multer errors into clear 400s. */
+const HEIF_BRANDS = new Set(['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis', 'mif1', 'msf1']);
+
+/** Identify a file by its first bytes ("magic numbers"). Returns an allowed MIME type or null. */
+export function sniffType(head) {
+  const ascii = (from, to) => head.subarray(from, to).toString('latin1');
+  if (head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff) return 'image/jpeg';
+  if (head.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'image/png';
+  if (ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WEBP') return 'image/webp';
+  if (ascii(4, 8) === 'ftyp' && HEIF_BRANDS.has(ascii(8, 12))) return 'image/heic';
+  if (ascii(0, 5) === '%PDF-') return 'application/pdf';
+  return null;
+}
+
+async function readHead(file) {
+  const handle = await fs.promises.open(file, 'r');
+  try {
+    const { buffer, bytesRead } = await handle.read(Buffer.alloc(16), 0, 16, 0);
+    return buffer.subarray(0, bytesRead);
+  } finally {
+    await handle.close();
+  }
+}
+
+/**
+ * Accepts an optional single `proof` file and turns multer errors into clear 400s.
+ * The browser-reported type is only a first filter: the saved file's actual bytes must match an
+ * allowed format, and that detected type is what gets stored and served back.
+ */
 export function proofUpload(req, res, next) {
-  uploader.single('proof')(req, res, (err) => {
-    if (!err) return next();
-    if (err.code === 'LIMIT_FILE_SIZE') return next(badRequest(`proof: file must be ${config.maxUploadBytes / 1024 / 1024} MB or smaller.`));
-    if (err instanceof multer.MulterError) return next(badRequest(`proof: ${err.message}`));
-    next(err);
+  uploader.single('proof')(req, res, async (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') return next(badRequest(`proof: file must be ${config.maxUploadBytes / 1024 / 1024} MB or smaller.`));
+      if (err instanceof multer.MulterError) return next(badRequest(`proof: ${err.message}`));
+      return next(err);
+    }
+    if (!req.file) return next();
+    try {
+      const detected = sniffType(await readHead(req.file.path));
+      if (!detected) {
+        discardUpload(req.file);
+        return next(badRequest("proof: that file isn't a valid JPG, PNG, WEBP, HEIC image or PDF."));
+      }
+      req.file.mimetype = detected;
+      next();
+    } catch (e) {
+      discardUpload(req.file);
+      next(e);
+    }
   });
 }
 

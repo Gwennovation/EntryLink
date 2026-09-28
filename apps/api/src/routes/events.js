@@ -272,7 +272,8 @@ router.get('/:id/stats', authenticate(), requireRole(...STAFF_ROLES), async (req
   res.json({ stats: await eventStats(req.params.id), recent_entries: await recentEntries(req.params.id) });
 });
 
-router.get('/:id/live', authenticate({ allowQueryToken: true }), requireRole('organizer', 'coordinator'), async (req, res) => {
+// The web dashboard's EventSource sends the session cookie, so no token ever appears in the URL.
+router.get('/:id/live', authenticate(), requireRole('organizer', 'coordinator'), async (req, res) => {
   await loadEventForDashboard(req);
   await openLiveStream(req, res, req.params.id);
 });

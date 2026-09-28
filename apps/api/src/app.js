@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { ZodError } from 'zod';
 import { config } from './config.js';
 import { HttpError } from './lib/errors.js';
+import { createRateLimits } from './middleware/rateLimits.js';
 import { router as authRouter } from './routes/auth.js';
 import { router as checkinRouter } from './routes/checkin.js';
 import { router as eventsRouter } from './routes/events.js';
@@ -15,10 +16,14 @@ import { router as usersRouter } from './routes/users.js';
 export function createApp() {
   const app = express();
   app.disable('x-powered-by');
-  app.set('trust proxy', 1);
+  app.set('trust proxy', config.trustProxy);
+  const limits = createRateLimits();
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(cors({ origin: config.corsOrigins.includes('*') ? true : config.corsOrigins }));
   app.use(express.json({ limit: '100kb' }));
+  app.use('/api', limits.api);
+  app.use('/api/auth/login', limits.login);
+  app.use('/api/auth/signup', limits.signup);
 
   app.get('/api/health', (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
   app.use('/api/auth', authRouter);

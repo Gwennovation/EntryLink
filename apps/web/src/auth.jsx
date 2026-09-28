@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { api, getToken, setToken, setUnauthorizedHandler } from './api.js';
+import { api, setUnauthorizedHandler } from './api.js';
 
 const AuthContext = createContext(null);
 
@@ -13,23 +13,29 @@ export const ROLE_LABEL = {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(Boolean(getToken()));
+  const [loading, setLoading] = useState(true);
 
-  const logout = useCallback(() => { setToken(null); setUser(null); }, []);
+  // Session expired or revoked server-side: just drop the local user.
+  const forget = useCallback(() => setUser(null), []);
+
+  const logout = useCallback(async () => {
+    await api.post('/auth/logout').catch(() => {});
+    setUser(null);
+  }, []);
 
   useEffect(() => {
-    setUnauthorizedHandler(logout);
-    if (!getToken()) return;
-    api.get('/auth/me').then((r) => setUser(r.user)).catch(logout).finally(() => setLoading(false));
-  }, [logout]);
+    setUnauthorizedHandler(forget);
+    // The cookie is invisible to JS, so ask the API whether we're signed in.
+    api.get('/auth/me').then((r) => setUser(r.user)).catch(forget).finally(() => setLoading(false));
+  }, [forget]);
 
   const login = async (email, password) => {
-    const { token, user: u } = await api.post('/auth/login', { email, password });
+    const { user: u } = await api.post('/auth/login', { email, password, session: 'cookie' });
     if (u.role === 'attendee') {
       // The web dashboard is for staff; attendees use the mobile app.
+      await api.post('/auth/logout').catch(() => {});
       throw new Error('Attendee accounts use the EntryLink mobile app. This dashboard is for event staff.');
     }
-    setToken(token);
     setUser(u);
   };
 

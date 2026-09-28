@@ -108,7 +108,10 @@ Ticket lifecycle: `issued → checked_in | cancelled | expired`.
 
 | Requirement | Implementation |
 |---|---|
-| NFR-001 passwords, HTTPS | bcrypt (cost 12). Run TLS at the reverse proxy or host (Render, Railway, Nginx). The API sets `trust proxy`. |
+| NFR-001 passwords, HTTPS | bcrypt (cost 12). TLS at the host or reverse proxy (see README → Deploying). Helmet sends HSTS; session cookies are `Secure` in production. |
+| Brute force | Per-IP rate limits (`middleware/rateLimits.js`), per-account lockout after 5 consecutive failures (15 min, audited as `user.locked`), and equal-time responses for unknown emails. `TRUST_PROXY` is explicit so `X-Forwarded-For` can't be spoofed. |
+| Web sessions & CSRF | The JWT lives in an httpOnly, `SameSite=Strict` cookie that scripts can't read. Cookie-authenticated writes need an `X-Requested-With` header that other sites can't send cross-origin. The mobile app uses Bearer tokens in SecureStore. |
+| Session revocation | Tokens carry `token_version`; a password change or reset bumps it, which kills every older token. Deactivation takes effect on the next request. |
 | NFR-002 / FR-014 RBAC | `requireRole()` on every route, plus ownership checks (an organizer sees only their own events; an attendee sees only their own registrations). The user is reloaded on every request, so deactivation takes effect immediately. |
 | Separation of duties (§2.6) | Only coordinators approve. Only gate staff scan. Admins can do neither. Covered by `test/rbac.test.js`. |
 | NFR-003 immutable audit | A DB trigger blocks UPDATE, DELETE and TRUNCATE on `audit_logs`. The SHA-256 hash chain makes out-of-band edits detectable via `GET /api/audit/verify`. |
@@ -116,8 +119,9 @@ Ticket lifecycle: `issued → checked_in | cancelled | expired`.
 | Organizer QR access | Only the owning organizer can view or print attendee QRs (the backup delivery path). Each view or export is audited with the ticket codes involved. |
 | Public event page | `/api/public/events/:id` is the only unauthenticated data endpoint. It returns published or closed events only, with no internal ids or attendee data. |
 | Deep-link redirects | After sign-in the app follows `next` only when it's an in-app path (`/…`, not `//…`), so a crafted link can't send users off-app. |
-| Uploads | Allow-listed MIME types, 5 MB limit, random server-side filenames, served only to authorized users. |
+| Uploads | 5 MB limit, random server-side filenames, and the file's first bytes must match JPG/PNG/WEBP/HEIC/PDF; the detected type is stored. Served only to authorized users, with `nosniff`. Images get a `sandbox` CSP and PDFs download, so an opened proof can't run scripts as our site. |
+| Web CSP | Production builds include a Content Security Policy: own scripts only, and requests to the same origin only. |
+| Production guards | The API refuses to start in production without `JWT_SECRET`, `QR_SECRET` and an explicit `CORS_ORIGINS`. |
 | CSV injection | Report cells that start with `= + - @` are prefixed with `'`. |
 
-Known gaps (fine for a prototype, fix before production): no login rate limiting, the SSE token
-travels in the query string (use a short-lived stream token), and uploads are not virus-scanned.
+Known gaps: rate-limit counters are in memory (use a shared store such as Redis when running several API instances), and uploads are not virus-scanned.

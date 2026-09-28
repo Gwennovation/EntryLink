@@ -120,8 +120,15 @@ router.get('/:id/proof', async (req, res) => {
   const file = proofFilePath(reg.proof_path);
   if (!fs.existsSync(file)) throw notFound('Proof of payment file');
   res.set('Content-Type', reg.proof_mime);
-  res.set('Content-Disposition', `inline; filename="proof-${reg.id}"`);
   res.set('Cache-Control', 'private, no-store');
+  // If someone opens this URL directly, nothing in the file can run as our site: images render in a
+  // sandbox with no scripts, and PDFs download instead of opening in the browser.
+  if (reg.proof_mime === 'application/pdf') {
+    res.set('Content-Disposition', `attachment; filename="proof-${reg.id}.pdf"`);
+  } else {
+    res.set('Content-Disposition', `inline; filename="proof-${reg.id}"`);
+    res.set('Content-Security-Policy', "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox");
+  }
   // Uploads live under .data/, and send() refuses dot-directories unless told otherwise.
   res.sendFile(file, { dotfiles: 'allow' });
 });

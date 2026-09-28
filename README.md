@@ -146,6 +146,21 @@ These are API integration tests on an in-memory database. They cover the full re
 approve → ticket → scan → duplicate flow, forged QR codes, capacity limits, reports, the audit chain
 and immutability, and a role-based access matrix (including separation of duties).
 
+## Deploying securely
+
+No system is unhackable, but these settings close the common holes. The API refuses to start in
+production if the first three are missing.
+
+- [ ] `NODE_ENV=production`, plus long random `JWT_SECRET` and `QR_SECRET` (`openssl rand -base64 48`). Never commit them.
+- [ ] `CORS_ORIGINS=https://your-web-domain`: only your web app may call the API from a browser.
+- [ ] HTTPS everywhere. Most hosts (Render, Railway, Vercel, Netlify) do this automatically. Session cookies are HTTPS-only in production.
+- [ ] Serve the web app and API on **one origin**, with the host proxying `/api/*` to the API. The session cookie is `SameSite=Strict` and scoped to `/api`, so this is required.
+- [ ] `TRUST_PROXY=1` if the API sits behind exactly one proxy or load balancer, so rate limits see real client IPs.
+- [ ] Set these headers on the **web host** (a `<meta>` tag can't): `Strict-Transport-Security: max-age=31536000; includeSubDomains`, `X-Frame-Options: DENY` (or CSP `frame-ancestors 'none'`), and `Referrer-Policy: strict-origin-when-cross-origin`. The API sets its own through Helmet.
+- [ ] Managed PostgreSQL (`DATABASE_URL`) with automatic daily backups (spec NFR-008), connected with a database user that isn't a superuser.
+- [ ] Change or remove the seeded demo accounts. The demo password is public in this repo.
+- [ ] On GitHub: Dependabot alerts, secret scanning with push protection, and branch protection for `main` requiring CI to pass.
+
 ## Requirements traceability
 
 | Req | Where |
@@ -165,6 +180,7 @@ and immutability, and a role-based access matrix (including separation of duties
 | Resend ticket | *Tickets & QR codes* → Resend → `ticket.resent` event → in-app inbox + email hook |
 | FR-014 / NFR-002 RBAC | `requireRole()` + ownership checks · `test/rbac.test.js` |
 | NFR-005 scan < 2s | asserted in `test/flow.test.js` |
+| Security hardening | `test/security.test.js`: lockout, rate limits, upload sniffing, cookie + CSRF, revocation, config guards |
 | NFR-009 onboarding | this README + `docs/` |
 
 ## Out of scope (per spec)

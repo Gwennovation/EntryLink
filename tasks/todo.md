@@ -77,3 +77,31 @@ entrylink/
 **Follow-ups worth doing**
 - Login rate limiting; a short-lived SSE stream token instead of the JWT in the query string.
 - `npx expo lint` hasn't been run: it needs eslint config installed, and the registry was very slow today.
+
+---
+
+# Hardening pass (2026-09-29)
+
+## Security (from the gap list)
+- [x] 1. Login brute force: per-IP rate limits on auth routes + per-account lockout (5 fails → 15 min), constant-time response for unknown emails. `TRUST_PROXY` made explicit so X-Forwarded-For can't be spoofed to dodge limits.
+- [x] 2. Uploads: verify file signature (magic bytes) matches an allowed type; store the detected type, not the client's claim; serve proofs with `CSP: sandbox`.
+- [x] 3. Web sessions: httpOnly `SameSite=Strict` cookie instead of localStorage; CSRF guard (custom header required on cookie-authenticated writes); logout endpoint. Mobile keeps Bearer + SecureStore.
+- [x] 5. Live feed: web uses the cookie, so the JWT-in-URL option is removed.
+- [x] 4. CORS: refuse `*` in production; allowed origins must be listed.
+- [x] 6. Web CSP in production builds; HSTS/frame-ancestors documented for the host.
+- [x] Token revocation: `token_version` bumped on password change/reset so old tokens die.
+
+## GitHub
+- [x] CI workflow: API tests + web build on every push/PR
+- [x] Dependabot config for npm (api, web, mobile) + GitHub Actions
+- [ ] Ask before changing repo settings (branch protection, secret scanning)
+
+## Review
+- 74/74 API tests pass (18 new in `test/security.test.js`); web production build is clean.
+- Verified in the browser against the production build (`vite preview`, real CSP): cookie sign-in (JS can't read the cookie; nothing in localStorage), live dashboard over the cookie-authenticated stream (a gate scan appeared instantly), proof preview under CSP, approval write through the CSRF check, sign-out clearing the session. No CSP violations.
+- The new migration applied cleanly to the existing demo database.
+- Not done here: GitHub repo settings (branch protection, secret scanning, Dependabot alerts) need your OK; CI only runs after the push.
+
+## Later (not in this pass)
+- Layout: mobile dark mode, accessibility review, check-in chart
+- Database: managed Postgres with backups, least-privilege DB role

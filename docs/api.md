@@ -1,7 +1,15 @@
 # EntryLink REST API contract
 
 Base URL: `/api`. JSON in and out, except uploads (multipart) and the CSV report.
-Authenticate with `Authorization: Bearer <jwt>` (from `/auth/login` or `/auth/signup`).
+
+**Two ways to authenticate:**
+- **Mobile / API clients:** send `Authorization: Bearer <jwt>` (the token from `/auth/login` or `/auth/signup`).
+- **Web dashboard:** sign in with `"session": "cookie"`. The API sets an httpOnly, `SameSite=Strict` cookie
+  (`el_session`, path `/api`) and returns no token. Every cookie-authenticated `POST`/`PUT`/`PATCH`/`DELETE`
+  must include the header `X-Requested-With: EntryLink`; without it the API returns 403 (CSRF protection).
+  The API must be served from the same origin as the web app, e.g. behind a reverse proxy at `/api`.
+
+Sessions last `SESSION_HOURS` (default 12). Changing or resetting a password ends every existing session.
 
 **Errors** always look like this:
 
@@ -16,6 +24,11 @@ Authenticate with `Authorization: Bearer <jwt>` (from `/auth/login` or `/auth/si
 | 403 | `forbidden` | Your role can't do this |
 | 404 | `not_found` | Doesn't exist, or you're not allowed to know it exists |
 | 409 | `conflict` | Invalid state transition, sold out, duplicate |
+| 429 | `rate_limited` | Too many requests from this IP (see limits below) |
+| 429 | `account_locked` | 5 wrong passwords in a row; the account is locked for 15 minutes |
+
+**Rate limits (per IP):** 600 requests/minute overall, 30 sign-in attempts per 15 minutes, 20 sign-ups
+per hour. Responses include `RateLimit` headers.
 
 Roles: `admin`, `organizer`, `coordinator`, `gate_staff`, `attendee`.
 
@@ -23,10 +36,11 @@ Roles: `admin`, `organizer`, `coordinator`, `gate_staff`, `attendee`.
 
 | Method | Path | Role | Body / notes |
 |---|---|---|---|
-| POST | `/auth/signup` | public | `{ email, password (≥8), full_name, phone? }` → `{ token, user }`. Always creates an attendee. |
-| POST | `/auth/login` | public | `{ email, password }` → `{ token, user }` |
+| POST | `/auth/signup` | public | `{ email, password (≥8), full_name, phone?, session? }` → `{ token, user }`, or `{ user }` + cookie when `session: "cookie"`. Always creates an attendee. |
+| POST | `/auth/login` | public | `{ email, password, session? }` → same as signup. Unknown emails and wrong passwords get the same 401. After 5 consecutive failures: 429 `account_locked` for 15 minutes. |
+| POST | `/auth/logout` | public | Clears the session cookie → 204 |
 | GET | `/auth/me` | any | → `{ user }` |
-| POST | `/auth/change-password` | any | `{ current_password, new_password }` → 204 |
+| POST | `/auth/change-password` | any | `{ current_password, new_password }` → a fresh session (token or cookie, matching how you're signed in). All other sessions end. |
 
 ## Users (FR-011)
 
@@ -35,7 +49,7 @@ Roles: `admin`, `organizer`, `coordinator`, `gate_staff`, `attendee`.
 | GET | `/users?role=&q=` | admin | |
 | POST | `/users` | admin | `{ email, full_name, role, password, phone? }` |
 | PATCH | `/users/:id` | admin | `{ full_name?, phone?, role?, is_active? }`. You can't change your own role or deactivate yourself. |
-| POST | `/users/:id/reset-password` | admin | `{ password }` → 204 |
+| POST | `/users/:id/reset-password` | admin | `{ password }` → 204. Also unlocks the account and ends the user's existing sessions. |
 
 ## Events & ticket types (FR-009)
 
@@ -55,7 +69,7 @@ Roles: `admin`, `organizer`, `coordinator`, `gate_staff`, `attendee`.
 | Method | Path | Role | Notes |
 |---|---|---|---|
 | GET | `/events/:id/stats` | owner organizer, coordinator, gate staff | `{ stats, recent_entries }` |
-| GET | `/events/:id/live?access_token=` | owner organizer, coordinator | **Server-Sent Events.** Emits `stats` (same shape as above) on connect and after every change, and `activity` `{ name, occurred_at, data }` for each domain event. |
+| GET | `/events/:id/live` | owner organizer, coordinator | **Server-Sent Events.** Authenticates with the session cookie (browsers' `EventSource` sends it automatically) or a Bearer header; tokens in the URL are not accepted. Emits `stats` (same shape as above) on connect and after every change, and `activity` `{ name, occurred_at, data }` for each domain event. |
 | GET | `/events/:id/report[?format=csv]` | owner organizer, coordinator | `{ report: { event, summary, by_ticket_type, checkins_by_hour, attendees } }`, or a CSV download |
 
 `stats` shape:
@@ -69,7 +83,7 @@ Roles: `admin`, `organizer`, `coordinator`, `gate_staff`, `attendee`.
 
 | Method | Path | Role | Notes |
 |---|---|---|---|
-| POST | `/registrations` | attendee | **multipart**: `event_id`, `ticket_type_id`, `payment_reference`, `proof` (file). Proof and reference are required for paid tickets. Accepts JPG, PNG, WEBP, HEIC or PDF up to 5 MB. |
+| POST | `/registrations` | attendee | **multipart**: `event_id`, `ticket_type_id`, `payment_reference`, `proof` (file). Proof and reference are required for paid tickets. Accepts JPG, PNG, WEBP, HEIC or PDF up to 5 MB, checked by the file's actual contents, not its name or declared type. |
 | GET | `/registrations/mine` | attendee | |
 | PUT | `/registrations/:id/resubmit` | attendee (owner) | **multipart**: `payment_reference?`, `proof?`. Only from `revision_requested`. Increments `version`. |
 | POST | `/registrations/:id/cancel` | attendee (owner) | From pending, revision_requested, or approved-but-unused |

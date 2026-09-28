@@ -79,7 +79,11 @@ router.patch('/:id', validate(updateSchema), async (req, res) => {
 });
 
 router.post('/:id/reset-password', validate(z.object({ password: passwordSchema })), async (req, res) => {
-  const user = await one('UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1 RETURNING id',
+  // Also unlocks the account and signs the user out everywhere (old tokens stop working).
+  const user = await one(
+    `UPDATE users SET password_hash = $2, failed_login_count = 0, locked_until = NULL,
+            token_version = token_version + 1, updated_at = now()
+      WHERE id = $1 RETURNING id`,
     [req.params.id, await bcrypt.hash(req.valid.body.password, 12)]);
   if (!user) throw notFound('User');
   await publish('user.password_reset', { actorId: req.user.id, entityType: 'user', entityId: user.id });

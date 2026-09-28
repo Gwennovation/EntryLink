@@ -1,13 +1,9 @@
 // Minimal fetch wrapper around the EntryLink REST API.
-const BASE = import.meta.env.VITE_API_URL || '/api';
-const TOKEN_KEY = 'entrylink.token';
-
-export const getToken = () => {
-  try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
-};
-export const setToken = (t) => {
-  try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch { /* private mode */ }
-};
+//
+// The session lives in an httpOnly cookie set by the API, so page scripts never see the token
+// (an XSS bug can't steal it). The API must be same-origin: /api is proxied by Vite in dev and by
+// your web host or reverse proxy in production.
+const BASE = '/api';
 
 export class ApiError extends Error {
   constructor(status, body) {
@@ -22,19 +18,19 @@ let onUnauthorized = () => {};
 export const setUnauthorizedHandler = (fn) => { onUnauthorized = fn; };
 
 async function request(method, path, { body, raw } = {}) {
-  const headers = {};
-  const token = getToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
+  // Required by the API on cookie-authenticated writes; other sites can't add it (CSRF protection).
+  const headers = { 'X-Requested-With': 'EntryLink' };
   if (body !== undefined && !(body instanceof FormData)) headers['Content-Type'] = 'application/json';
   let res;
   try {
     res = await fetch(`${BASE}${path}`, {
-      method, headers, body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
+      method, headers, credentials: 'same-origin',
+      body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
     });
   } catch {
     throw new ApiError(0, { error: { message: 'Cannot reach the EntryLink server. Check your connection.' } });
   }
-  if (res.status === 401 && token) onUnauthorized();
+  if (res.status === 401 && path !== '/auth/login') onUnauthorized();
   if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => null));
   if (raw) return res;
   return res.status === 204 ? null : res.json();
@@ -49,7 +45,8 @@ export const api = {
   blob: async (p) => (await request('GET', p, { raw: true })).blob(),
 };
 
-export const liveUrl = (eventId) => `${BASE}/events/${eventId}/live?access_token=${encodeURIComponent(getToken() ?? '')}`;
+// EventSource sends the session cookie automatically (same origin), so no token goes in the URL.
+export const liveUrl = (eventId) => `${BASE}/events/${eventId}/live`;
 
 /** Download an authenticated file (e.g. CSV report) via a temporary object URL. */
 export async function download(path, filename) {
