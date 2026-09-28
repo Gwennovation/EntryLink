@@ -14,6 +14,8 @@ function resolveBaseUrl() {
 
 export const API_URL = resolveBaseUrl();
 
+const unreachable = () => `Can’t reach EntryLink right now. Check your internet connection and try again.${__DEV__ ? ` (API: ${API_URL})` : ''}`;
+
 let token = null;
 let onUnauthorized = () => {};
 export const setApiToken = (t) => { token = t; };
@@ -38,11 +40,15 @@ async function request(method, path, body) {
       method, headers, body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
     });
   } catch {
-    throw new ApiError(0, { error: { message: `Can't reach EntryLink. Check your internet connection. (${API_URL})` } });
+    throw new ApiError(0, { error: { message: unreachable() } });
   }
-  if (res.status === 401 && token) onUnauthorized();
+  // A non-JSON reply came from something other than the API (proxy/host error page).
+  const isJson = (res.headers.get('content-type') || '').includes('application/json');
+  if (res.status === 401 && token && isJson) onUnauthorized();
+  if (res.status === 204) return null;
+  if (!isJson) throw new ApiError(res.status, { error: { message: unreachable() } });
   if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => null));
-  return res.status === 204 ? null : res.json();
+  return res.json();
 }
 
 export const api = {

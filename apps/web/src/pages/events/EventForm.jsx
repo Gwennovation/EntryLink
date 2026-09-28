@@ -12,6 +12,7 @@ export default function EventForm({ initial, withTicketTypes, onSubmit, onCancel
   const [f, setF] = useState(() => ({
     title: initial?.title ?? '',
     description: initial?.description ?? '',
+    payment_instructions: initial?.payment_instructions ?? '',
     venue: initial?.venue ?? '',
     starts_at: initial ? toLocalInput(initial.starts_at) : '',
     ends_at: initial ? toLocalInput(initial.ends_at) : '',
@@ -24,7 +25,7 @@ export default function EventForm({ initial, withTicketTypes, onSubmit, onCancel
   const submit = (e) => {
     e.preventDefault();
     const body = {
-      title: f.title, description: f.description, venue: f.venue, capacity: Number(f.capacity),
+      title: f.title, description: f.description, payment_instructions: f.payment_instructions, venue: f.venue, capacity: Number(f.capacity),
       starts_at: new Date(f.starts_at).toISOString(), ends_at: new Date(f.ends_at).toISOString(),
     };
     if (withTicketTypes) {
@@ -41,6 +42,11 @@ export default function EventForm({ initial, withTicketTypes, onSubmit, onCancel
       <div className="form-grid">
         <label style={{ gridColumn: '1 / -1' }}>Title<input required minLength={3} value={f.title} onChange={set('title')} placeholder="e.g. Metro Manila Career Fair 2026" /></label>
         <label style={{ gridColumn: '1 / -1' }}>Description<textarea value={f.description} onChange={set('description')} /></label>
+        <label style={{ gridColumn: '1 / -1' }}>
+          Payment instructions <span className="field-hint">required for paid tickets — shown to attendees when they pick a ticket</span>
+          <textarea value={f.payment_instructions} onChange={set('payment_instructions')}
+            placeholder={'GCash: 0917 123 4567 (Your Company)\nBPI: 1234-5678-90 (Your Company Inc.)\nPut your full name in the reference.'} />
+        </label>
         <label>Venue<input required value={f.venue} onChange={set('venue')} /></label>
         <label>Capacity<input required type="number" min={1} value={f.capacity} onChange={set('capacity')} /></label>
         <label>Starts<input required type="datetime-local" value={f.starts_at} onChange={set('starts_at')} /></label>

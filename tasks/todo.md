@@ -105,3 +105,28 @@ entrylink/
 ## Later (not in this pass)
 - Layout: mobile dark mode, accessibility review, check-in chart
 - Database: managed Postgres with backups, least-privilege DB role
+
+---
+
+# Design & UX pass (2026-09-29), from the design critique
+
+1. [x] Payment instructions on events: field in API + web form, required before publishing an event with paid tickets, shown on the mobile ticket and revision screens, seeded.
+2. [x] "Already registered" state: `my_registration` on events for attendees; mobile event screen shows status + View ticket instead of the ticket picker; events list shows a badge.
+3. [x] Contrast: input borders ≥3:1, dark-mode Approve/danger buttons, dark active nav, mobile placeholders. Re-run the contrast check.
+4. [x] Tables: rows reachable by keyboard (real links); review queue shows Status first, event + ticket in one cell, counts on the tabs (`counts` from the API).
+5. [x] Gate on phones: compact layout, live headcount, success/failure sounds (with a toggle), no Pause button when the camera is unavailable, 44px controls.
+6. [x] Reject confirmation and a clearer "write a note to enable" hint.
+7. [x] Clear "can't reach the server" message instead of "Request failed (404)".
+8. [x] Mobile bookings: event date instead of submission date, View ticket shortcut, "My bookings" title.
+9. [x] Consistency: no duplicate event title on mobile, centered button text on web.
+10. [x] Mobile dark mode (follows the system theme).
+
+## Review
+- 82/82 API tests (8 new in `test/ux.test.js`); web build clean; mobile bundle compiles.
+- Contrast: all 36 text/background pairs pass WCAG AA in light and dark (was 8 failures).
+- Checked in the browser:
+  - Web: login input borders, the review queue (status first, tab counts, keyboard-openable rows), the dark-mode Approve button, and the Reject confirmation (cancel leaves it pending).
+  - Web gate at phone size, where a manual check-in showed ✓ and the headcount went 0 → 1, and the "can't reach server" message with the API stopped.
+  - Mobile in dark and light: the events-list badges, "You're registered" on the event screen, bookings with event dates and View ticket, and payment instructions on the revision screen.
+- Not verified: gate sounds (the browser pane can't play audio to me), the live camera, and the native iOS/Android dark mode (checked via Expo web only).
+- Found during checks: a stale web dev server had lost its /api proxy (restart fixed it, no code change). The dark-mode header hairline was fixed with `headerShadowVisible: false`.

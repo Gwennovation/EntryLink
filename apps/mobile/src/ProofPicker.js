@@ -1,12 +1,13 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Image, Text, View } from 'react-native';
-import { Button, s } from './ui';
+import { Button, useTheme } from './ui';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
 /** Lets the attendee attach a receipt screenshot/photo or a PDF. `value` is { uri, name, mimeType, file? }. */
 export default function ProofPicker({ value, onChange, onError }) {
+  const { colors, s } = useTheme();
   const accept = (asset, fallbackName) => {
     if (asset.fileSize > MAX_BYTES || asset.size > MAX_BYTES) {
       onError(new Error('That file is larger than 5 MB. Try a screenshot instead of a full-resolution photo.'));
@@ -40,7 +41,7 @@ export default function ProofPicker({ value, onChange, onError }) {
             ? <Image source={{ uri: value.uri }} style={{ width: 64, height: 64, borderRadius: 8 }} />
             : <Text style={{ fontSize: 32 }}>📄</Text>}
           <Text style={[s.muted, { flex: 1 }]} numberOfLines={1}>{value.name}</Text>
-          <Text style={{ color: '#b42318', fontWeight: '600' }} onPress={() => onChange(null)}>Remove</Text>
+          <Text style={{ color: colors.bad, fontWeight: '600' }} onPress={() => onChange(null)} accessibilityRole="button">Remove</Text>
         </View>
       ) : (
         <View style={s.row}>

@@ -2,9 +2,10 @@ import { Link, Redirect, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { afterSignIn, useAuth } from '../auth';
-import { Button, colors, ErrorText, Field, s } from '../ui';
+import { Button, ErrorText, Field, useTheme } from '../ui';
 
 export default function Login() {
+  const { colors, s } = useTheme();
   const { user, signIn } = useAuth();
   const { next } = useLocalSearchParams(); // set when a poster link opened the app before sign-in
   const [email, setEmail] = useState('');
@@ -25,7 +26,7 @@ export default function Login() {
       <ScrollView contentContainerStyle={[s.content, { flexGrow: 1, justifyContent: 'center', paddingTop: 64 }]} keyboardShouldPersistTaps="handled">
         <View style={{ alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 22 }}>EL</Text>
+            <Text style={{ color: colors.onBrand, fontWeight: '800', fontSize: 22 }}>EL</Text>
           </View>
           <Text style={s.h1}>EntryLink</Text>
           <Text style={s.muted}>Register for events and keep your tickets in one place.</Text>

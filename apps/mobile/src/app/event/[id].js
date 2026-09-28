@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { api, formWith } from '../../api';
 import { useAuth } from '../../auth';
+import PaymentInstructions from '../../PaymentInstructions';
 import ProofPicker from '../../ProofPicker';
-import { Button, Card, colors, dateTime, ErrorText, Field, peso, s, useFocusLoad } from '../../ui';
+import { Badge, Button, Card, dateTime, ErrorText, Field, peso, useFocusLoad, useTheme } from '../../ui';
 
 // Also the target of poster links (entrylink://event/<id>), so it may open before sign-in.
 export default function EventScreen() {
@@ -15,6 +16,7 @@ export default function EventScreen() {
 }
 
 function EventDetails({ id }) {
+  const { colors, s } = useTheme();
   const { data, error } = useFocusLoad(() => api.get(`/events/${id}`), [id]);
   const [typeId, setTypeId] = useState(null);
   const [reference, setReference] = useState('');
@@ -42,7 +44,8 @@ function EventDetails({ id }) {
 
   return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Stack.Screen options={{ title: e?.title ?? 'Event' }} />
+      {/* The event name is the big heading below; repeating it in the header bar is noise. */}
+      <Stack.Screen options={{ title: 'Event details' }} />
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <ErrorText error={error} />
         {e && (
@@ -54,6 +57,8 @@ function EventDetails({ id }) {
               {e.description ? <Text style={[s.body, { marginTop: 4 }]}>{e.description}</Text> : null}
             </Card>
 
+            {e.my_registration ? <AlreadyRegistered mine={e.my_registration} /> : (
+            <>
             <Text style={[s.h2, { marginTop: 8 }]}>Choose a ticket</Text>
             {e.ticket_types.map((t) => {
               const soldOut = t.quantity != null && t.sold >= t.quantity;
@@ -75,9 +80,7 @@ function EventDetails({ id }) {
               <Card style={{ marginTop: 4, gap: 14 }}>
                 {paid ? (
                   <>
-                    <Text style={s.body}>
-                      Pay <Text style={{ fontWeight: '700' }}>{peso(type.price_cents)}</Text> using the payment instructions from the organizer, then enter the reference number and upload your receipt. A coordinator will verify it and your QR ticket will appear in your wallet.
-                    </Text>
+                    <PaymentInstructions amountCents={type.price_cents} instructions={e.payment_instructions} />
                     <Field label="Payment reference number" value={reference} onChangeText={setReference} autoCapitalize="characters" placeholder="e.g. GCASH-1234-5678" />
                     <ProofPicker value={proof} onChange={setProof} onError={setSubmitError} />
                   </>
@@ -88,9 +91,32 @@ function EventDetails({ id }) {
                 <Button title="Submit registration" onPress={submit} busy={busy} disabled={paid && (!proof || !reference.trim())} />
               </Card>
             )}
+            </>
+            )}
           </>
         )}
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+const REGISTERED_NOTE = {
+  pending: 'A coordinator is checking your payment. We’ll notify you when your ticket is ready.',
+  revision_requested: 'The coordinator needs something from you before approving. Open your booking to see what.',
+  approved: 'Your QR ticket is ready. Show it at the gate.',
+};
+
+/** Shown instead of the ticket picker when the attendee already has a live booking for this event. */
+function AlreadyRegistered({ mine }) {
+  const { s } = useTheme();
+  const hasTicket = mine.ticket_id && mine.status === 'approved';
+  return (
+    <Card style={{ marginTop: 8, gap: 10 }}>
+      <Text style={s.h2}>You’re registered</Text>
+      <Badge status={mine.status} />
+      <Text style={s.body}>{REGISTERED_NOTE[mine.status]}</Text>
+      {hasTicket && <Button title="View ticket" onPress={() => router.push(`/ticket/${mine.ticket_id}`)} />}
+      <Button title="View booking" variant={hasTicket ? 'secondary' : 'primary'} onPress={() => router.push(`/registration/${mine.id}`)} />
+    </Card>
   );
 }

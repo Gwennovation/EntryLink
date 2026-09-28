@@ -55,11 +55,11 @@ Roles: `admin`, `organizer`, `coordinator`, `gate_staff`, `attendee`.
 
 | Method | Path | Role | Notes |
 |---|---|---|---|
-| GET | `/events` | any | Attendees: published upcoming events. Organizers: their own. Others: all non-draft (admins also see drafts). Each event includes `ticket_types[]` (with `sold`) and `approved_count`. |
-| GET | `/events/:id` | any | Drafts are visible only to the owner and admins |
-| POST | `/events` | organizer | `{ title, description?, venue, starts_at, ends_at, capacity, ticket_types: [{ name, price_cents, quantity?, description? }] }`. Created as `draft`. |
-| PATCH | `/events/:id` | owner | Any event field. Capacity can't go below the approved count. |
-| POST | `/events/:id/publish` | owner | draft → published |
+| GET | `/events` | any | Attendees: published upcoming events. Organizers: their own. Others: all non-draft (admins also see drafts). Each event includes `ticket_types[]` (with `sold`), `approved_count`, and for attendees `my_registration` (`{ id, status, ticket_id, ticket_status }` or `null`). |
+| GET | `/events/:id` | any | Drafts are visible only to the owner and admins. Includes `payment_instructions` and, for attendees, `my_registration`. |
+| POST | `/events` | organizer | `{ title, description?, payment_instructions?, venue, starts_at, ends_at, capacity, ticket_types: [{ name, price_cents, quantity?, description? }] }`. Created as `draft`. |
+| PATCH | `/events/:id` | owner | Any event field. Capacity can't go below the approved count, and a published paid event's `payment_instructions` can't be cleared. |
+| POST | `/events/:id/publish` | owner | draft → published. 409 if the event has paid tickets but no `payment_instructions`. |
 | POST | `/events/:id/close` | owner | Stops registration and entry; unused tickets → `expired` |
 | POST | `/events/:id/ticket-types` | owner | `{ name, price_cents, quantity?, description? }` |
 | DELETE | `/events/:id/ticket-types/:typeId` | owner | Only if the type has no registrations |
@@ -87,7 +87,7 @@ Roles: `admin`, `organizer`, `coordinator`, `gate_staff`, `attendee`.
 | GET | `/registrations/mine` | attendee | |
 | PUT | `/registrations/:id/resubmit` | attendee (owner) | **multipart**: `payment_reference?`, `proof?`. Only from `revision_requested`. Increments `version`. |
 | POST | `/registrations/:id/cancel` | attendee (owner) | From pending, revision_requested, or approved-but-unused |
-| GET | `/registrations?event_id=&status=&q=` | coordinator, organizer (own events) | Review queue, oldest first |
+| GET | `/registrations?event_id=&status=&q=` | coordinator, organizer (own events) | Review queue, oldest first. Also returns `counts` per status (plus `all`) for the same filters, for the tab badges. |
 | GET | `/registrations/:id` | owner, coordinator, event organizer | `{ registration, history[], ticket }` |
 | GET | `/registrations/:id/proof` | same | Streams the uploaded file |
 | POST | `/registrations/:id/approve` | coordinator | `{ note? }` → `{ registration, ticket }`. **Issues the QR ticket.** |

@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { api, formWith } from '../../api';
 import { useAuth } from '../../auth';
+import PaymentInstructions from '../../PaymentInstructions';
 import ProofPicker from '../../ProofPicker';
-import { Badge, Button, Card, colors, dateTime, ErrorText, Field, humanize, peso, s, useFocusLoad } from '../../ui';
+import { Badge, Button, Card, dateTime, ErrorText, Field, humanize, peso, useFocusLoad, useTheme } from '../../ui';
 
 const EXPLAIN = {
   pending: 'A coordinator is reviewing your payment. You’ll be notified as soon as it’s approved.',
@@ -15,6 +16,7 @@ const EXPLAIN = {
 };
 
 export default function RegistrationScreen() {
+  const { colors, s } = useTheme();
   const { id } = useLocalSearchParams();
   const { user } = useAuth();
   const detail = useFocusLoad(() => api.get(`/registrations/${id}`), [id]);
@@ -79,6 +81,7 @@ export default function RegistrationScreen() {
             {r.status === 'revision_requested' && (
               <Card style={{ gap: 12 }}>
                 <Text style={s.h2}>Update your registration</Text>
+                {r.amount_cents > 0 && <PaymentInstructions amountCents={r.amount_cents} instructions={r.payment_instructions} />}
                 <Field label="Payment reference" hint="leave blank to keep" value={reference} onChangeText={setReference} autoCapitalize="characters" placeholder={r.payment_reference ?? ''} />
                 <ProofPicker value={proof} onChange={setProof} onError={setError} />
                 <Button title="Resubmit for review" onPress={resubmit} busy={busy === 'resubmit'} disabled={!proof && !reference.trim()} />
@@ -93,7 +96,7 @@ export default function RegistrationScreen() {
               {thread.data?.comments.map((c) => {
                 const mine = c.author_id === user.id;
                 return (
-                  <View key={c.id} style={{ alignSelf: mine ? 'flex-end' : 'flex-start', maxWidth: '85%', backgroundColor: mine ? colors.brandSoft : '#f0f2f5', padding: 10, borderRadius: 12 }}>
+                  <View key={c.id} style={{ alignSelf: mine ? 'flex-end' : 'flex-start', maxWidth: '85%', backgroundColor: mine ? colors.brandSoft : colors.mutedSoft, padding: 10, borderRadius: 12 }}>
                     <Text style={s.small}>{mine ? 'You' : `${c.author_name} (coordinator)`} · {dateTime(c.created_at)}</Text>
                     <Text style={s.body}>{c.body}</Text>
                   </View>

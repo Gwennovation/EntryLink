@@ -76,6 +76,12 @@ export default function EventDetail() {
                 <dt>Venue</dt><dd>{e.venue}</dd>
                 <dt>When</dt><dd>{dateRange(e.starts_at, e.ends_at)}</dd>
                 <dt>Capacity</dt><dd>{e.capacity.toLocaleString()} attendees</dd>
+                <dt>Payment</dt>
+                <dd style={{ whiteSpace: 'pre-wrap' }}>
+                  {e.payment_instructions || (e.ticket_types.some((t) => t.price_cents > 0)
+                    ? <span className="badge warn">Missing — add them so attendees know where to pay</span>
+                    : <span className="muted">Not needed (free event)</span>)}
+                </dd>
               </dl>
             </div>
           )}

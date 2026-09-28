@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../api.js';
 import { ErrorNote, StatusBadge, useLoad } from '../../components/ui.jsx';
 import { dateTime, peso } from '../../format.js';
@@ -31,24 +31,32 @@ export default function Review() {
           <input placeholder="Search name, email or payment ref" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <div className="tabs">
-          {TABS.map(([value, label]) => (
-            <button key={label} className={status === value ? 'active' : ''} onClick={() => setParam('status', value)}>{label}</button>
-          ))}
+          {TABS.map(([value, label]) => {
+            const n = data?.counts?.[value || 'all'];
+            return (
+              <button key={label} className={status === value ? 'active' : ''} aria-pressed={status === value} onClick={() => setParam('status', value)}>
+                {label}{n != null && <span className="count">{n}</span>}
+              </button>
+            );
+          })}
         </div>
         <ErrorNote error={error} />
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Submitted</th><th>Attendee</th><th>Event</th><th>Ticket</th><th>Amount</th><th>Payment ref</th><th>Status</th></tr></thead>
+            <thead><tr><th>Status</th><th>Attendee</th><th>Event · ticket</th><th>Amount</th><th>Payment ref</th><th>Submitted</th></tr></thead>
             <tbody>
               {data?.registrations.map((r) => (
+                // The whole row is clickable for mouse users; the name is a real link for keyboards and screen readers.
                 <tr key={r.id} className="clickable" onClick={() => navigate(`/registrations/${r.id}`)}>
-                  <td className="small" style={{ whiteSpace: 'nowrap' }}>{dateTime(r.updated_at)}{r.version > 1 && <div className="small muted">revision {r.version}</div>}</td>
-                  <td>{r.attendee_name}<div className="small muted">{r.attendee_email}</div></td>
-                  <td>{r.event_title}</td>
-                  <td>{r.ticket_type}</td>
-                  <td>{r.amount_cents ? peso(r.amount_cents) : 'Free'}</td>
-                  <td className="mono">{r.payment_reference ?? '—'}{r.amount_cents > 0 && !r.has_proof && <div className="badge bad">no proof</div>}</td>
                   <td><StatusBadge status={r.status} /></td>
+                  <td>
+                    <Link to={`/registrations/${r.id}`} className="row-link" onClick={(e) => e.stopPropagation()}>{r.attendee_name}</Link>
+                    <div className="small muted">{r.attendee_email}</div>
+                  </td>
+                  <td className="cell-wide">{r.event_title}<div className="small muted">{r.ticket_type}</div></td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{r.amount_cents ? peso(r.amount_cents) : 'Free'}</td>
+                  <td className="mono">{r.payment_reference ?? '—'}{r.amount_cents > 0 && !r.has_proof && <div className="badge bad">no proof</div>}</td>
+                  <td className="small" style={{ whiteSpace: 'nowrap' }}>{dateTime(r.updated_at)}{r.version > 1 && <div className="small muted">revision {r.version}</div>}</td>
                 </tr>
               ))}
             </tbody>

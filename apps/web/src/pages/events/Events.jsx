@@ -46,7 +46,10 @@ export default function Events() {
                 const prices = e.ticket_types.map((t) => t.price_cents);
                 return (
                   <tr key={e.id} className="clickable" onClick={() => navigate(`/events/${e.id}`)}>
-                    <td><strong>{e.title}</strong><div className="small muted">{e.venue}</div></td>
+                    <td className="cell-wide">
+                      <Link to={`/events/${e.id}`} className="row-link" onClick={(ev) => ev.stopPropagation()}>{e.title}</Link>
+                      <div className="small muted">{e.venue}</div>
+                    </td>
                     <td className="small">{dateRange(e.starts_at, e.ends_at)}</td>
                     <td><StatusBadge status={e.status} /></td>
                     <td>{e.approved_count} / {e.capacity}</td>

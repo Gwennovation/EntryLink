@@ -92,14 +92,25 @@ router.get('/', requireRole('coordinator', 'organizer'), validate(listSchema, 'q
   const add = (sql, v) => { params.push(v); where.push(sql.replaceAll('?', `$${params.length}`)); };
   if (req.user.role === 'organizer') add('e.organizer_id = ?', req.user.id);
   if (event_id) add('r.event_id = ?', event_id);
-  if (status) add('r.status = ?', status);
   if (q) add('(u.full_name ILIKE ? OR u.email ILIKE ? OR r.payment_reference ILIKE ?)', `%${q}%`);
+  // Tab counts: same filters, every status.
+  const { rows: countRows } = await query(
+    `SELECT r.status, count(*)::int AS n FROM registrations r
+       JOIN events e ON e.id = r.event_id JOIN users u ON u.id = r.attendee_id
+      ${where.length ? `WHERE ${where.join(' AND ')}` : ''} GROUP BY r.status`,
+    params,
+  );
+  const counts = Object.fromEntries(STATUSES.map((st) => [st, 0]));
+  for (const { status: st, n } of countRows) counts[st] = n;
+  counts.all = countRows.reduce((sum, r) => sum + r.n, 0);
+
+  if (status) add('r.status = ?', status);
   const { rows } = await query(
     // Oldest pending first so the queue is worked in order of arrival.
     `${LIST_SQL} ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY r.created_at ASC LIMIT 500`,
     params,
   );
-  res.json({ registrations: rows.map(present) });
+  res.json({ registrations: rows.map(present), counts });
 });
 
 router.get('/:id', async (req, res) => {

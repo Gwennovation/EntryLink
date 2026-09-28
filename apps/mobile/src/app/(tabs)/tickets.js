@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
 import { FlatList, Image, Pressable, RefreshControl, Text, View } from 'react-native';
 import { api } from '../../api';
-import { Badge, dateTime, Empty, ErrorText, s, useFocusLoad } from '../../ui';
+import { Badge, dateTime, Empty, ErrorText, useFocusLoad, useTheme } from '../../ui';
 
 export default function Tickets() {
+  const { s } = useTheme();
   const { data, error, loading, reload } = useFocusLoad(() => api.get('/tickets/mine'));
   return (
     <FlatList

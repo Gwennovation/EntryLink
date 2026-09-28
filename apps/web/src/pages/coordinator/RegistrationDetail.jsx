@@ -71,8 +71,11 @@ export default function RegistrationDetail() {
   if (!data) return <div className="empty">Loading…</div>;
   const { registration: r, history, ticket } = data;
   const canReview = user.role === 'coordinator' && r.status === 'pending';
+  const hasNote = note.trim().length >= 3;
 
   const decide = async (action, label) => {
+    // Rejection is final (the attendee has to register again), so make sure it's intended.
+    if (action === 'reject' && !window.confirm(`Reject ${r.attendee_name}'s registration? This can't be undone — they would need to register again.`)) return;
     const res = await act.run(() => api.post(`/registrations/${id}/${action}`, note.trim() ? { note: note.trim() } : {}));
     if (res) {
       setNote('');
@@ -106,12 +109,13 @@ export default function RegistrationDetail() {
             <div className="card stack">
               <h2 style={{ margin: 0 }}>Decision</h2>
               <ErrorNote error={act.error} />
-              <label>Note to attendee <span className="field-hint">required for reject / revision</span>
+              <label>Note to attendee <span className="field-hint">optional for approval</span>
                 <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Reference number doesn't match our bank records" />
               </label>
               <button className="ok" disabled={act.busy} onClick={() => decide('approve', 'Approved')}>✓ Approve & issue ticket</button>
-              <button disabled={act.busy || note.trim().length < 3} onClick={() => decide('request-revision', 'Revision requested')}>↺ Request revision</button>
-              <button className="danger" disabled={act.busy || note.trim().length < 3} onClick={() => decide('reject', 'Rejected')}>✕ Reject</button>
+              <button disabled={act.busy || !hasNote} onClick={() => decide('request-revision', 'Revision requested')}>↺ Request revision</button>
+              <button className="danger" disabled={act.busy || !hasNote} onClick={() => decide('reject', 'Rejected')}>✕ Reject</button>
+              {!hasNote && <p className="small muted" style={{ margin: 0 }}>Write a note first to enable <strong>Request revision</strong> or <strong>Reject</strong>. The attendee sees it, so tell them what to fix or why.</p>}
             </div>
           )}
 

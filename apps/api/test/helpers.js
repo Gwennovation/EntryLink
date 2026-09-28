@@ -60,9 +60,11 @@ export async function createLiveEvent(as, overrides = {}) {
     ends_at: new Date(now + 3 * 3600_000).toISOString(),
     capacity: 2,
     ticket_types: [{ name: 'Regular', price_cents: 50000 }, { name: 'Free', price_cents: 0 }],
+    payment_instructions: 'GCash 0917 000 0000 (Test Events)',
     ...overrides,
   });
   if (res.status !== 201) throw new Error(`createLiveEvent failed: ${JSON.stringify(res.body)}`);
-  await as('organizer').post(`/api/events/${res.body.event.id}/publish`);
+  const pub = await as('organizer').post(`/api/events/${res.body.event.id}/publish`);
+  if (pub.status !== 200) throw new Error(`publish failed: ${JSON.stringify(pub.body)}`);
   return res.body.event;
 }

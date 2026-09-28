@@ -40,6 +40,16 @@ async function loadEventForDashboard(req) {
   return event;
 }
 
+const NEEDS_PAYMENT_INSTRUCTIONS =
+  'Add payment instructions (e.g. your GCash number or bank account) so attendees know where to pay for paid tickets.';
+
+/** A published event with paid tickets must tell attendees where to pay. */
+async function assertCanTakePayment(event, { instructions = event.payment_instructions, addingPaidType = false } = {}) {
+  if (instructions?.trim()) return;
+  const paid = addingPaidType || await one('SELECT 1 FROM ticket_types WHERE event_id = $1 AND price_cents > 0 LIMIT 1', [event.id]);
+  if (paid) throw conflict(NEEDS_PAYMENT_INSTRUCTIONS);
+}
+
 async function ticketTypesFor(eventIds) {
   if (!eventIds.length) return {};
   const { rows } = await query(
@@ -53,6 +63,18 @@ async function ticketTypesFor(eventIds) {
 
 // ---- Listing & detail ------------------------------------------------------------------------
 
+/** For attendees: their active booking per event, so the app can show "You're registered". */
+async function myRegistrations(user, eventIds) {
+  if (user.role !== 'attendee' || !eventIds.length) return {};
+  const { rows } = await query(
+    `SELECT r.id, r.event_id, r.status, t.id AS ticket_id, t.status AS ticket_status
+       FROM registrations r LEFT JOIN tickets t ON t.registration_id = r.id
+      WHERE r.attendee_id = $1 AND r.event_id = ANY($2) AND r.status NOT IN ('rejected', 'cancelled')`,
+    [user.id, eventIds],
+  );
+  return Object.fromEntries(rows.map(({ event_id, ...r }) => [event_id, r]));
+}
+
 router.get('/', authenticate(), async (req, res) => {
   const { role, id } = req.user;
   let sql = `SELECT e.*, u.full_name AS organizer_name,
@@ -64,16 +86,17 @@ router.get('/', authenticate(), async (req, res) => {
   else if (role === 'admin') sql += ` ORDER BY e.starts_at DESC`;
   else sql += ` WHERE e.status <> 'draft' ORDER BY e.starts_at DESC`; // coordinators & gate staff
   const { rows } = await query(sql, params);
-  const types = await ticketTypesFor(rows.map((e) => e.id));
-  res.json({ events: rows.map((e) => ({ ...e, ticket_types: types[e.id] ?? [] })) });
+  const ids = rows.map((e) => e.id);
+  const [types, mine] = await Promise.all([ticketTypesFor(ids), myRegistrations(req.user, ids)]);
+  res.json({ events: rows.map((e) => ({ ...e, ticket_types: types[e.id] ?? [], my_registration: mine[e.id] ?? null })) });
 });
 
 router.get('/:id', authenticate(), async (req, res) => {
   const event = await loadEvent(req.params.id);
   const hidden = event.status === 'draft' && !(req.user.role === 'organizer' && event.organizer_id === req.user.id) && req.user.role !== 'admin';
   if (hidden) throw notFound('Event');
-  const types = await ticketTypesFor([event.id]);
-  res.json({ event: { ...event, ticket_types: types[event.id] ?? [] } });
+  const [types, mine] = await Promise.all([ticketTypesFor([event.id]), myRegistrations(req.user, [event.id])]);
+  res.json({ event: { ...event, ticket_types: types[event.id] ?? [], my_registration: mine[event.id] ?? null } });
 });
 
 // ---- Organizer: create / edit / lifecycle ------------------------------------------------------
@@ -81,6 +104,7 @@ router.get('/:id', authenticate(), async (req, res) => {
 const eventFields = {
   title: z.string().trim().min(3, 'must be at least 3 characters').max(160),
   description: z.string().trim().max(5000),
+  payment_instructions: z.string().trim().max(1000),
   venue: z.string().trim().min(2, 'is required').max(200),
   starts_at: z.coerce.date({ error: 'must be a valid date/time' }),
   ends_at: z.coerce.date({ error: 'must be a valid date/time' }),
@@ -98,6 +122,7 @@ const ticketTypeSchema = z.object({
 const createEventSchema = z.object({
   ...eventFields,
   description: eventFields.description.default(''),
+  payment_instructions: eventFields.payment_instructions.default(''),
   ticket_types: z.array(ticketTypeSchema).min(1, 'add at least one ticket type').max(20),
 }).refine(endsAfterStart, { message: 'must be after the start time', path: ['ends_at'] });
 
@@ -107,9 +132,9 @@ router.post('/', authenticate(), requireRole('organizer'), validate(createEventS
   if (new Set(names).size !== names.length) throw badRequest('ticket_types: each ticket type needs a unique name.');
   const event = await tx(async (q) => {
     const { rows: [e] } = await q.query(
-      `INSERT INTO events (title, description, venue, starts_at, ends_at, capacity, organizer_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [b.title, b.description, b.venue, b.starts_at, b.ends_at, b.capacity, req.user.id],
+      `INSERT INTO events (title, description, payment_instructions, venue, starts_at, ends_at, capacity, organizer_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [b.title, b.description, b.payment_instructions, b.venue, b.starts_at, b.ends_at, b.capacity, req.user.id],
     );
     for (const t of b.ticket_types) {
       await q.query(
@@ -133,6 +158,9 @@ router.patch('/:id', authenticate(), requireRole('organizer'), validate(updateEv
   const changes = req.valid.body;
   const merged = { ...event, ...changes };
   if (!(new Date(merged.ends_at) > new Date(merged.starts_at))) throw badRequest('ends_at: must be after the start time');
+  if (event.status === 'published' && changes.payment_instructions !== undefined) {
+    await assertCanTakePayment(event, { instructions: changes.payment_instructions });
+  }
   if (changes.capacity !== undefined) {
     const { approved } = await one(`SELECT count(*)::int AS approved FROM registrations WHERE event_id = $1 AND status = 'approved'`, [event.id]);
     if (changes.capacity < approved) throw conflict(`Capacity can't be lower than the ${approved} tickets already issued.`);
@@ -149,6 +177,7 @@ router.patch('/:id', authenticate(), requireRole('organizer'), validate(updateEv
 router.post('/:id/publish', authenticate(), requireRole('organizer'), async (req, res) => {
   const event = await loadOwnedEvent(req);
   if (event.status !== 'draft') throw conflict(`This event is already ${event.status}.`);
+  await assertCanTakePayment(event);
   const updated = await one(`UPDATE events SET status = 'published', updated_at = now() WHERE id = $1 RETURNING *`, [event.id]);
   await publish('event.published', { actorId: req.user.id, entityType: 'event', entityId: event.id, eventId: event.id });
   res.json({ event: updated });
@@ -173,6 +202,7 @@ router.post('/:id/ticket-types', authenticate(), requireRole('organizer'), valid
   const event = await loadOwnedEvent(req);
   if (event.status === 'closed') throw conflict('Closed events can no longer be edited.');
   const t = req.valid.body;
+  if (event.status === 'published' && t.price_cents > 0) await assertCanTakePayment(event, { addingPaidType: true });
   let type;
   try {
     type = await one(

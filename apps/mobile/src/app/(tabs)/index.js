@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { api } from '../../api';
-import { colors, dateTime, Empty, ErrorText, peso, s, useFocusLoad } from '../../ui';
+import { Badge, dateTime, Empty, ErrorText, peso, useFocusLoad, useTheme } from '../../ui';
 
 export default function Events() {
+  const { colors, s } = useTheme();
   const { data, error, loading, reload } = useFocusLoad(() => api.get('/events'));
   return (
     <FlatList
@@ -19,6 +20,7 @@ export default function Events() {
         const left = e.capacity - e.approved_count;
         return (
           <Pressable onPress={() => router.push(`/event/${e.id}`)} style={({ pressed }) => [s.card, pressed && { opacity: 0.85 }]}>
+            {e.my_registration && <Badge status={e.my_registration.status} />}
             <Text style={s.h2}>{e.title}</Text>
             <Text style={s.muted}>{dateTime(e.starts_at)}</Text>
             <Text style={s.muted}>{e.venue}</Text>
@@ -26,7 +28,7 @@ export default function Events() {
               <Text style={{ fontWeight: '600', color: colors.brand }}>
                 {prices.length ? (Math.min(...prices) === Math.max(...prices) ? peso(prices[0]) : `From ${peso(Math.min(...prices))}`) : ''}
               </Text>
-              <Text style={s.small}>{left <= 0 ? 'Sold out' : left < 50 ? `${left} spots left` : ''}</Text>
+              <Text style={s.small}>{e.my_registration ? 'You’re registered' : left <= 0 ? 'Sold out' : left < 50 ? `${left} spots left` : ''}</Text>
             </View>
           </Pressable>
         );

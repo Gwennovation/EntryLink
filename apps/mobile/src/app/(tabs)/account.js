@@ -1,9 +1,10 @@
 import { ScrollView, Text } from 'react-native';
 import { API_URL } from '../../api';
 import { useAuth } from '../../auth';
-import { Button, Card, s } from '../../ui';
+import { Button, Card, useTheme } from '../../ui';
 
 export default function Account() {
+  const { s } = useTheme();
   const { user, signOut } = useAuth();
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.content}>

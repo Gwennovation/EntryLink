@@ -2,7 +2,8 @@
   --bg: #f5f6f8;
   --surface: #ffffff;
   --surface-2: #f0f2f5;
-  --border: #e2e5ea;
+  --border: #e2e5ea;            /* dividers and card edges (decorative) */
+  --input-border: #7d8596;      /* form fields: ≥3:1 against surfaces (WCAG 1.4.11) */
   --text: #16181d;
   --muted: #5d6573;
   --brand: #3b3fd8;
@@ -16,6 +17,8 @@
   --bad-soft: #fde8e6;
   --info: #175cd3;
   --info-soft: #e4eefc;
+  --on-ok: #ffffff;             /* text on solid ok/bad buttons */
+  --on-bad: #ffffff;
   --radius: 10px;
   --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 8%);
   font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -30,9 +33,10 @@
     --surface: #171a21;
     --surface-2: #1f232c;
     --border: #2b303b;
+    --input-border: #626b7b;
     --text: #e8eaef;
     --muted: #9aa3b2;
-    --brand: #7b7ff0;
+    --brand: #8a8ef3;
     --brand-ink: #0f1115;
     --brand-soft: #23264a;
     --ok: #4ad38b;
@@ -43,6 +47,8 @@
     --bad-soft: #3d1a17;
     --info: #7cb0ff;
     --info-soft: #172a47;
+    --on-ok: #0f1115;           /* the dark theme's bright green/red need dark text */
+    --on-bad: #0f1115;
     color-scheme: dark;
   }
 }
@@ -110,12 +116,15 @@ td { padding: 10px; border-bottom: 1px solid var(--border); vertical-align: top;
 tr:last-child td { border-bottom: 0; }
 tr.clickable { cursor: pointer; }
 tr.clickable:hover td { background: var(--surface-2); }
+tr.clickable:focus-within td { background: var(--surface-2); }
+a.row-link { color: var(--text); font-weight: 600; }
+td.cell-wide { min-width: 200px; }
 
 /* ---- Forms ---- */
 label { display: flex; flex-direction: column; gap: 4px; font-weight: 500; font-size: 13px; }
 input, select, textarea {
   font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border);
-  border-radius: 8px; padding: 8px 10px; min-width: 0;
+  border-radius: 8px; padding: 8px 10px; min-width: 0; border-color: var(--input-border);
 }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); outline-offset: -1px; border-color: transparent; }
 textarea { resize: vertical; min-height: 72px; }
@@ -123,18 +132,21 @@ textarea { resize: vertical; min-height: 72px; }
 .field-hint { font-weight: 400; color: var(--muted); font-size: 12px; }
 .check { flex-direction: row; align-items: center; gap: 8px; }
 
+/* ---- Keyboard focus ---- */
+a:focus-visible, button:focus-visible, .btn:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
+
 /* ---- Buttons ---- */
 button, .btn {
   font: inherit; font-weight: 600; border-radius: 8px; padding: 8px 14px; border: 1px solid var(--border);
-  background: var(--surface); color: var(--text); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface); color: var(--text); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
 }
 button:hover:not(:disabled) { background: var(--surface-2); }
 button:disabled { opacity: 0.55; cursor: not-allowed; }
 button.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
 button.primary:hover:not(:disabled) { filter: brightness(1.08); background: var(--brand); }
-button.ok { background: var(--ok); border-color: var(--ok); color: #fff; }
+button.ok { background: var(--ok); border-color: var(--ok); color: var(--on-ok); }
 button.danger { color: var(--bad); }
-button.danger-solid { background: var(--bad); border-color: var(--bad); color: #fff; }
+button.danger-solid { background: var(--bad); border-color: var(--bad); color: var(--on-bad); }
 button.small { padding: 4px 10px; font-size: 12.5px; }
 button.link { border: 0; background: none; padding: 0; color: var(--brand); font-weight: 500; }
 
@@ -176,6 +188,13 @@ dl.kv dt { color: var(--muted); }
 dl.kv dd { margin: 0; }
 
 /* ---- Gate scanner ---- */
+.gate-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.gate-bar select { flex: 1 1 220px; }
+/* 44px minimum touch targets for staff using a phone at the door */
+.gate-control { min-height: 44px; }
+.gate-count { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 12px; font-variant-numeric: tabular-nums; }
+.gate-count strong { font-size: 22px; }
+@media (max-width: 820px) { .gate-head { display: none; } }
 .scanner { position: relative; background: #000; border-radius: var(--radius); overflow: hidden; aspect-ratio: 4 / 3; }
 .scanner video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .scanner .reticle { position: absolute; inset: 18%; border: 3px solid rgb(255 255 255 / 70%); border-radius: 16px; pointer-events: none; }

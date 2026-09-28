@@ -15,6 +15,12 @@ import {
 if (config.env === 'production') throw new Error('Refusing to seed a production database.');
 
 export const DEMO_PASSWORD = 'EntryLink123!';
+// Demo only: fictional account numbers.
+const PAYMENT_INSTRUCTIONS = [
+  'GCash: 0917 555 0123 (Cityscape Events Mgmt)',
+  'BPI: 1234-5678-90 (Cityscape Events Management Inc.)',
+  'Put your full name in the message/reference so we can match your payment.',
+].join('\n');
 
 const PEOPLE = [
   ['admin@entrylink.test', 'Ada Admin', 'admin'],
@@ -64,9 +70,9 @@ async function main() {
   const now = Date.now();
   async function createEvent(fields, types) {
     const e = await one(
-      `INSERT INTO events (title, description, venue, starts_at, ends_at, capacity, organizer_id, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'published') RETURNING *`,
-      [fields.title, fields.description, fields.venue, fields.starts_at, fields.ends_at, fields.capacity, users.organizer.id],
+      `INSERT INTO events (title, description, payment_instructions, venue, starts_at, ends_at, capacity, organizer_id, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'published') RETURNING *`,
+      [fields.title, fields.description, PAYMENT_INSTRUCTIONS, fields.venue, fields.starts_at, fields.ends_at, fields.capacity, users.organizer.id],
     );
     const tt = [];
     for (const [name, price, qty] of types) {

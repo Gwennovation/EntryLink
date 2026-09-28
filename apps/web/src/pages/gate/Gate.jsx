@@ -3,9 +3,32 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../../api.js';
 import { ErrorNote, StatusBadge, useAction, useLoad } from '../../components/ui.jsx';
 import { humanize, time } from '../../format.js';
+import { playResult, unlockSound } from './sounds.js';
 
 const RESULT_HOLD_MS = 2500;   // how long the big green/red banner stays up
 const SAME_CODE_COOLDOWN_MS = 4000; // ignore the same QR still held in front of the camera
+const HEADCOUNT_POLL_MS = 15_000;
+const SOUND_KEY = 'entrylink.gate.sound';
+
+const readSoundPref = () => {
+  try { return localStorage.getItem(SOUND_KEY) !== 'off'; } catch { return true; }
+};
+
+/** Live "inside / capacity" for the selected event (fire-code headcount). */
+function useHeadcount(eventId) {
+  const [stats, setStats] = useState(null);
+  const refresh = useCallback(() => {
+    if (!eventId) return;
+    api.get(`/events/${eventId}/stats`).then((r) => setStats(r.stats)).catch(() => {});
+  }, [eventId]);
+  useEffect(() => {
+    setStats(null);
+    refresh();
+    const timer = setInterval(refresh, HEADCOUNT_POLL_MS);
+    return () => clearInterval(timer);
+  }, [refresh]);
+  return { stats, refresh };
+}
 
 /** Camera → canvas → jsQR loop. Calls onCode(text) when a QR is decoded. */
 function useQrCamera(videoRef, active, onCode) {
@@ -71,6 +94,17 @@ export default function Gate() {
   const busyRef = useRef(false);
   const lastCodeRef = useRef({ code: null, at: 0 });
   const holdRef = useRef(null);
+  const [sound, setSound] = useState(readSoundPref);
+  const soundRef = useRef(sound);
+  const { stats, refresh: refreshHeadcount } = useHeadcount(eventId);
+
+  const toggleSound = () => {
+    const next = !sound;
+    setSound(next);
+    soundRef.current = next;
+    if (next) unlockSound();
+    try { localStorage.setItem(SOUND_KEY, next ? 'on' : 'off'); } catch { /* private mode */ }
+  };
 
   useEffect(() => {
     if (!eventId && openEvents.length) {
@@ -87,7 +121,9 @@ export default function Gate() {
     clearTimeout(holdRef.current);
     holdRef.current = setTimeout(() => setResult(null), RESULT_HOLD_MS);
     navigator.vibrate?.(res.valid ? 80 : [60, 60, 60]);
-  }, []);
+    if (soundRef.current) playResult(res.valid);
+    if (res.valid) refreshHeadcount();
+  }, [refreshHeadcount]);
 
   const onCode = useCallback(async (payload) => {
     const now = Date.now();
@@ -110,16 +146,34 @@ export default function Gate() {
 
   return (
     <>
-      <div className="page-head">
+      {/* On phones the title and description are hidden so the camera is visible without scrolling. */}
+      <div className="page-head gate-head">
         <div><h1>Gate scanner</h1><p>Point the camera at the attendee’s QR ticket. Results appear instantly.</p></div>
-        <div className="row">
-          <select value={eventId} onChange={(e) => setEventId(e.target.value)} aria-label="Event">
-            {openEvents.length === 0 && <option value="">No open events</option>}
-            {openEvents.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
-          </select>
-          <button onClick={() => setCameraOn((c) => !c)}>{cameraOn ? 'Pause camera' : 'Resume camera'}</button>
-        </div>
       </div>
+      <div className="gate-bar">
+        <select className="gate-control" value={eventId} onChange={(e) => setEventId(e.target.value)} aria-label="Event">
+          {openEvents.length === 0 && <option value="">No open events</option>}
+          {openEvents.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
+        </select>
+        <button className="gate-control" onClick={toggleSound} aria-pressed={sound} title="Beep on each scan">
+          {sound ? '🔊 Sound on' : '🔇 Sound off'}
+        </button>
+        {/* Pausing only makes sense when there's a camera to pause. */}
+        {!camError && (
+          <button className="gate-control" onClick={() => setCameraOn((c) => !c)}>{cameraOn ? 'Pause camera' : 'Resume camera'}</button>
+        )}
+      </div>
+      {stats && (
+        <div className="gate-count" aria-live="polite">
+          <span>Inside</span>
+          <strong>{stats.checked_in.toLocaleString()}</strong>
+          <span className="muted">/ {stats.capacity.toLocaleString()}</span>
+          <div className="meter" style={{ flex: 1, marginTop: 0 }}>
+            <span style={{ width: `${Math.min(100, (stats.checked_in / stats.capacity) * 100)}%` }} />
+          </div>
+          <span className="muted small">{Math.round((stats.checked_in / stats.capacity) * 100)}%</span>
+        </div>
+      )}
       <ErrorNote error={events.error || error} />
 
       <div className="grid grid-2">
@@ -189,8 +243,8 @@ function ManualCheckIn({ eventId, onResult }) {
       <p className="small muted" style={{ margin: 0 }}>For damaged screens, dead phones, or unreadable codes. Every manual entry is logged with your reason.</p>
       <ErrorNote error={act.error} />
       <form className="row" onSubmit={search}>
-        <input style={{ flex: 1 }} placeholder="Ticket code, name or email" value={q} onChange={(e) => setQ(e.target.value)} minLength={2} required />
-        <button disabled={act.busy || !eventId}>Search</button>
+        <input className="gate-control" style={{ flex: 1 }} placeholder="Ticket code, name or email" value={q} onChange={(e) => setQ(e.target.value)} minLength={2} required />
+        <button className="gate-control" disabled={act.busy || !eventId}>Search</button>
       </form>
       {matches && matches.length === 0 && <div className="muted small">No tickets found for this event.</div>}
       {matches?.map((t) => (

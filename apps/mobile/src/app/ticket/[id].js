@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { Image, Platform, ScrollView, Text, View } from 'react-native';
 import { api } from '../../api';
-import { Badge, colors, dateTime, ErrorText, s, useFocusLoad } from '../../ui';
+import { Badge, dateTime, ErrorText, useFocusLoad, useTheme } from '../../ui';
 
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' });
 
@@ -13,6 +13,7 @@ const NOTE = {
 };
 
 export default function TicketScreen() {
+  const { colors, s } = useTheme();
   const { id } = useLocalSearchParams();
   const { data, error } = useFocusLoad(() => api.get(`/tickets/${id}`), [id]);
   const t = data?.ticket;
@@ -21,6 +22,7 @@ export default function TicketScreen() {
       <ErrorText error={error} />
       {t && (
         <>
+          {/* Stays white in dark mode: scanners read dark-on-light QR codes most reliably. */}
           <View style={{ backgroundColor: '#fff', padding: 16, borderRadius: 20, borderWidth: 1, borderColor: colors.border }}>
             <Image source={{ uri: t.qr_image }} style={{ width: 280, height: 280, opacity: t.status === 'issued' ? 1 : 0.25 }} accessibilityLabel="QR ticket" />
           </View>

@@ -2,9 +2,10 @@ import { router, useNavigation } from 'expo-router';
 import { useLayoutEffect } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { api } from '../../api';
-import { colors, dateTime, Empty, ErrorText, s, useFocusLoad } from '../../ui';
+import { dateTime, Empty, ErrorText, useFocusLoad, useTheme } from '../../ui';
 
 export default function Inbox() {
+  const { colors, s } = useTheme();
   const navigation = useNavigation();
   const { data, error, loading, reload } = useFocusLoad(() => api.get('/notifications/mine'));
 

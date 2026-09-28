@@ -202,7 +202,7 @@ export async function cancelRegistration({ attendeeId, registrationId }) {
  */
 export async function getRegistrationFor(user, id) {
   const reg = await one(
-    `SELECT r.*, e.title AS event_title, e.organizer_id, e.starts_at, e.venue,
+    `SELECT r.*, e.title AS event_title, e.organizer_id, e.starts_at, e.venue, e.payment_instructions,
             tt.name AS ticket_type, u.full_name AS attendee_name, u.email AS attendee_email, u.phone AS attendee_phone,
             rv.full_name AS reviewer_name
        FROM registrations r

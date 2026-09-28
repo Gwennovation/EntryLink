@@ -2,9 +2,10 @@ import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text } from 'react-native';
 import { afterSignIn, useAuth } from '../auth';
-import { Button, ErrorText, Field, s } from '../ui';
+import { Button, ErrorText, Field, useTheme } from '../ui';
 
 export default function Signup() {
+  const { s } = useTheme();
   const { user, signUp } = useAuth();
   const { next } = useLocalSearchParams();
   const [f, setF] = useState({ full_name: '', email: '', phone: '', password: '' });

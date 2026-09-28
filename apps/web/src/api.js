@@ -28,13 +28,24 @@ async function request(method, path, { body, raw } = {}) {
       body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
     });
   } catch {
-    throw new ApiError(0, { error: { message: 'Cannot reach the EntryLink server. Check your connection.' } });
+    throw new ApiError(0, { error: { message: UNREACHABLE } });
   }
-  if (res.status === 401 && path !== '/auth/login') onUnauthorized();
-  if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => null));
+  // Anything that isn't JSON came from something other than the API (a proxy, host or dev server
+  // error page), which almost always means the API is down or not reachable at /api.
+  const isJson = (res.headers.get('content-type') || '').includes('application/json');
+  if (res.status === 401 && isJson && path !== '/auth/login') onUnauthorized();
+  if (!res.ok) {
+    if (!isJson) throw new ApiError(res.status, { error: { message: UNREACHABLE } });
+    throw new ApiError(res.status, await res.json().catch(() => null));
+  }
   if (raw) return res;
-  return res.status === 204 ? null : res.json();
+  if (res.status === 204) return null;
+  if (!isJson) throw new ApiError(res.status, { error: { message: UNREACHABLE } });
+  return res.json();
 }
+
+const UNREACHABLE = 'Can’t reach the EntryLink server right now. Check your connection and try again. '
+  + '(Running it yourself? Make sure the API is started.)';
 
 export const api = {
   get: (p) => request('GET', p),
