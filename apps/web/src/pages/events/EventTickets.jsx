@@ -19,9 +19,17 @@ export default function EventTickets() {
   const [selected, setSelected] = useState(null);
   const show = useAction();
 
+  const resend = useAction();
+  const [resent, setResent] = useState(null);
+
   const open = async (t) => {
+    setResent(null);
     const res = await show.run(() => api.get(`/events/${id}/tickets/${t.id}/qr`));
     if (res) setSelected(res.ticket);
+  };
+  const resendTicket = async () => {
+    const res = await resend.run(() => api.post(`/events/${id}/tickets/${selected.id}/resend`));
+    if (res) setResent(res.channels);
   };
   const printSheet = (params) => navigate(`/events/${id}/tickets/print?${new URLSearchParams(params)}`);
 
@@ -85,7 +93,15 @@ export default function EventTickets() {
               <div className="row">
                 <a className="btn" href={selected.qr_image} download={`entrylink-ticket-${selected.short_code}.png`}>Download PNG</a>
                 <button onClick={() => printSheet({ q: selected.short_code })}>Print</button>
+                {selected.status === 'issued' && <button disabled={resend.busy} onClick={resendTicket}>{resend.busy ? 'Sending…' : 'Resend ticket'}</button>}
               </div>
+              <ErrorNote error={resend.error} />
+              {resent && (
+                <div className="alert ok">
+                  Sent to {selected.attendee_name}’s app inbox.{' '}
+                  {resent.email === 'not_configured' ? 'Email isn’t set up yet, so no email went out — download or print the QR if they need a copy now.' : 'Email sent too.'}
+                </div>
+              )}
               <p className="small muted" style={{ margin: 0 }}>
                 Send the PNG to the attendee, or print it. It’s the same QR as in their wallet, so the gate admits it only once.
               </p>

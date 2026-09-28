@@ -1,12 +1,20 @@
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { api, formWith } from '../../api';
+import { useAuth } from '../../auth';
 import ProofPicker from '../../ProofPicker';
 import { Button, Card, colors, dateTime, ErrorText, Field, peso, s, useFocusLoad } from '../../ui';
 
+// Also the target of poster links (entrylink://event/<id>), so it may open before sign-in.
 export default function EventScreen() {
   const { id } = useLocalSearchParams();
+  const { user } = useAuth();
+  if (!user) return <Redirect href={{ pathname: '/login', params: { next: `/event/${id}` } }} />;
+  return <EventDetails id={id} />;
+}
+
+function EventDetails({ id }) {
   const { data, error } = useFocusLoad(() => api.get(`/events/${id}`), [id]);
   const [typeId, setTypeId] = useState(null);
   const [reference, setReference] = useState('');

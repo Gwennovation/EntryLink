@@ -4,6 +4,9 @@ import { ActivityIndicator, View } from 'react-native';
 import { AuthProvider, useAuth } from '../auth';
 import { colors } from '../ui';
 
+// A deep link straight to an event still gets the tabs underneath, so "back" has somewhere to go.
+export const unstable_settings = { initialRouteName: '(tabs)' };
+
 function RootStack() {
   const { ready } = useAuth();
   if (!ready) {

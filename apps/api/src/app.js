@@ -7,6 +7,7 @@ import { HttpError } from './lib/errors.js';
 import { router as authRouter } from './routes/auth.js';
 import { router as checkinRouter } from './routes/checkin.js';
 import { router as eventsRouter } from './routes/events.js';
+import { router as publicRouter } from './routes/public.js';
 import { auditRouter, notificationsRouter, ticketsRouter } from './routes/misc.js';
 import { router as registrationsRouter } from './routes/registrations.js';
 import { router as usersRouter } from './routes/users.js';
@@ -21,6 +22,7 @@ export function createApp() {
 
   app.get('/api/health', (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
   app.use('/api/auth', authRouter);
+  app.use('/api/public', publicRouter);
   app.use('/api/users', usersRouter);
   app.use('/api/events', eventsRouter);
   app.use('/api/registrations', registrationsRouter);

@@ -28,7 +28,8 @@ notificationsRouter.use(authenticate());
 
 notificationsRouter.get('/mine', async (req, res) => {
   const { rows } = await query(
-    'SELECT id, type, title, body, data, read_at, created_at FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100',
+    `SELECT id, type, title, body, data, read_at, created_at FROM notifications
+      WHERE user_id = $1 AND channel = 'in_app' ORDER BY created_at DESC LIMIT 100`,
     [req.user.id],
   );
   const unread = rows.filter((n) => !n.read_at).length;
@@ -36,7 +37,7 @@ notificationsRouter.get('/mine', async (req, res) => {
 });
 
 notificationsRouter.post('/read-all', async (req, res) => {
-  await query('UPDATE notifications SET read_at = now() WHERE user_id = $1 AND read_at IS NULL', [req.user.id]);
+  await query(`UPDATE notifications SET read_at = now() WHERE user_id = $1 AND channel = 'in_app' AND read_at IS NULL`, [req.user.id]);
   res.status(204).end();
 });
 
@@ -51,7 +52,8 @@ notificationsRouter.post('/:id/read', async (req, res) => {
 // Admin view of the full notification log (spec §2.1 "Notification Log").
 notificationsRouter.get('/', requireRole('admin'), async (_req, res) => {
   const { rows } = await query(
-    `SELECT n.id, n.type, n.title, n.channel, n.read_at, n.created_at, u.full_name AS recipient_name, u.email AS recipient_email
+    `SELECT n.id, n.type, n.title, n.channel, n.data->>'status' AS delivery_status, n.data->>'error' AS delivery_error,
+            n.read_at, n.created_at, u.full_name AS recipient_name, u.email AS recipient_email
        FROM notifications n JOIN users u ON u.id = n.user_id ORDER BY n.created_at DESC LIMIT 200`,
   );
   res.json({ notifications: rows });

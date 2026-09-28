@@ -8,11 +8,13 @@ import Review from './pages/coordinator/Review.jsx';
 import RegistrationDetail from './pages/coordinator/RegistrationDetail.jsx';
 import EventDetail from './pages/events/EventDetail.jsx';
 import EventLive from './pages/events/EventLive.jsx';
+import EventPoster from './pages/events/EventPoster.jsx';
 import EventTickets from './pages/events/EventTickets.jsx';
 import Events from './pages/events/Events.jsx';
 import TicketSheet from './pages/events/TicketSheet.jsx';
 import Gate from './pages/gate/Gate.jsx';
 import Login from './pages/Login.jsx';
+import PublicEvent from './pages/public/PublicEvent.jsx';
 
 /** Route guard: only render for the listed roles; otherwise send the user to their home page. */
 function Allow({ roles, children }) {
@@ -37,6 +39,7 @@ function AppRoutes() {
         <Route path="events/:id/live" element={<Allow roles={['organizer', 'coordinator']}><EventLive /></Allow>} />
         <Route path="events/:id/tickets" element={<Allow roles={['organizer']}><EventTickets /></Allow>} />
         <Route path="events/:id/tickets/print" element={<Allow roles={['organizer']}><TicketSheet /></Allow>} />
+        <Route path="events/:id/poster" element={<Allow roles={['organizer']}><EventPoster /></Allow>} />
         <Route path="review" element={<Allow roles={['coordinator']}><Review /></Allow>} />
         <Route path="registrations/:id" element={<Allow roles={['coordinator', 'organizer']}><RegistrationDetail /></Allow>} />
         <Route path="gate" element={<Allow roles={['gate_staff']}><Gate /></Allow>} />
@@ -50,7 +53,11 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <AppRoutes />
+        <Routes>
+          {/* Public page opened from event poster QR codes — no sign-in. */}
+          <Route path="/e/:id" element={<PublicEvent />} />
+          <Route path="*" element={<AppRoutes />} />
+        </Routes>
       </BrowserRouter>
     </AuthProvider>
   );

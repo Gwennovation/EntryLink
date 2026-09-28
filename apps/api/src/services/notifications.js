@@ -1,6 +1,6 @@
 // Notification Service — reacts to domain events and writes to the notification log.
-// Delivery is simulated as in-app notifications (spec §1.5). To add real email/SMS later,
-// register another subscriber (e.g. SendGrid/Twilio) for the same events; nothing else changes.
+// Delivery is simulated as in-app notifications (spec §1.5). Ticket emails are handled by a separate
+// subscriber (services/email.js) that stays inactive until an email provider is configured.
 import { one, query } from '../db/index.js';
 
 export async function notify(userId, type, title, body, data = {}) {
@@ -52,6 +52,13 @@ export const notificationHandlers = {
     const r = await registrationContext(data.registration_id);
     await notify(r.attendee_id, 'ticket.issued', 'Your ticket is ready',
       `You're in! Your QR ticket for ${r.event_title} is now in your ticket wallet (code ${data.short_code}).`,
+      { ticket_id: entityId, registration_id: r.id, event_id: r.event_id });
+  },
+
+  async 'ticket.resent'({ entityId, data }) {
+    const r = await registrationContext(data.registration_id);
+    await notify(r.attendee_id, 'ticket.resent', 'Your ticket (sent again)',
+      `The organizer re-sent your QR ticket for ${r.event_title} (code ${data.short_code}). Open it from your ticket wallet.`,
       { ticket_id: entityId, registration_id: r.id, event_id: r.event_id });
   },
 

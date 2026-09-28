@@ -103,6 +103,20 @@ credential, so every view and export is written to the audit log (`ticket.qr_vie
 
 The gate treats an organizer-provided copy exactly like the attendee's own, so a ticket is still admitted only once.
 
+| Method | Path | Role | Notes |
+|---|---|---|---|
+| POST | `/events/:id/tickets/:ticketId/resend` | owner organizer | Re-delivers an unused ticket: in-app notification plus the email hook. Returns `{ resent, channels: { in_app, email } }`, where `email` is `sent` or `not_configured`. 409 if the ticket was already used, cancelled or expired. Audited as `ticket.resent`. |
+
+## Event poster QR & public event page
+
+| Method | Path | Role | Notes |
+|---|---|---|---|
+| GET | `/events/:id/poster` | owner organizer | `{ url, qr_image, link_is_local }`. The QR encodes `PUBLIC_WEB_URL/e/:id`; `link_is_local` warns when that's a localhost link phones can't open. 409 for draft, closed or ended events. |
+| GET | `/public/events/:id` | **public, no auth** | Published or closed events only (drafts are 404). Returns title, description, venue, dates, `ticket_types[]` (name, price, `sold_out`), `registration_open`, `sold_out`. No internal ids or counts. |
+
+The web route `/e/:id` renders this and links to the app at `VITE_APP_LINK_BASE + "event/:id"`.
+
+
 ## Gate check-in (FR-005, FR-006)
 
 | Method | Path | Role | Notes |
@@ -129,7 +143,7 @@ A closed event returns 409 before any validation runs.
 | GET | `/notifications/mine` | any | `{ notifications, unread }` |
 | POST | `/notifications/:id/read` | owner | 204 |
 | POST | `/notifications/read-all` | any | 204 |
-| GET | `/notifications` | admin | Full notification log |
+| GET | `/notifications` | admin | Full notification log, including `channel` (`in_app` / `email`) and, for email, `delivery_status` (`sent` / `failed` / `not_configured`). `/notifications/mine` returns in-app rows only. |
 
 ## Audit (FR-007, FR-010)
 

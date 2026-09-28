@@ -1,17 +1,18 @@
-import { Redirect } from 'expo-router';
+import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text } from 'react-native';
-import { useAuth } from '../auth';
+import { afterSignIn, useAuth } from '../auth';
 import { Button, ErrorText, Field, s } from '../ui';
 
 export default function Signup() {
   const { user, signUp } = useAuth();
+  const { next } = useLocalSearchParams();
   const [f, setF] = useState({ full_name: '', email: '', phone: '', password: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const set = (k) => (v) => setF({ ...f, [k]: v });
 
-  if (user) return <Redirect href="/" />;
+  if (user) return <Redirect href={afterSignIn(next)} />;
 
   const submit = async () => {
     setBusy(true);

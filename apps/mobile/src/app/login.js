@@ -1,17 +1,18 @@
-import { Link, Redirect } from 'expo-router';
+import { Link, Redirect, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
-import { useAuth } from '../auth';
+import { afterSignIn, useAuth } from '../auth';
 import { Button, colors, ErrorText, Field, s } from '../ui';
 
 export default function Login() {
   const { user, signIn } = useAuth();
+  const { next } = useLocalSearchParams(); // set when a poster link opened the app before sign-in
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
-  if (user) return <Redirect href="/" />;
+  if (user) return <Redirect href={afterSignIn(next)} />;
 
   const submit = async () => {
     setBusy(true);
@@ -33,7 +34,7 @@ export default function Login() {
         <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" textContentType="username" />
         <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" textContentType="password" onSubmitEditing={submit} />
         <Button title="Sign in" onPress={submit} busy={busy} disabled={!email || !password} />
-        <Link href="/signup" asChild>
+        <Link href={{ pathname: '/signup', params: next ? { next } : {} }} asChild>
           <Button title="Create an account" variant="secondary" />
         </Link>
         {__DEV__ && (

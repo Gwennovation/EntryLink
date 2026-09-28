@@ -2,7 +2,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { one, query, tx } from '../db/index.js';
+import { config } from '../config.js';
 import { publish } from '../lib/bus.js';
+import { toDataUrl } from '../lib/qr.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -219,6 +221,21 @@ router.get('/:id/tickets/qr-sheet', authenticate(), requireRole('organizer'), va
   res.json(result);
 });
 
+// Re-sends the ticket through the normal delivery channels (in-app now; email once a provider is set).
+router.post('/:id/tickets/:ticketId/resend', authenticate(), requireRole('organizer'), async (req, res) => {
+  const event = await loadOwnedEvent(req);
+  const ticket = await one(
+    'SELECT id, registration_id, short_code, status FROM tickets WHERE id = $1 AND event_id = $2', [req.params.ticketId, event.id],
+  );
+  if (!ticket) throw notFound('Ticket');
+  if (ticket.status !== 'issued') throw conflict(`This ticket is ${ticket.status.replace('_', ' ')} — there's nothing to resend.`);
+  await publish('ticket.resent', {
+    actorId: req.user.id, entityType: 'ticket', entityId: ticket.id, eventId: event.id,
+    data: { registration_id: ticket.registration_id, short_code: ticket.short_code },
+  });
+  res.json({ resent: true, channels: { in_app: 'delivered', email: config.emailProvider ? 'sent' : 'not_configured' } });
+});
+
 router.get('/:id/tickets/:ticketId/qr', authenticate(), requireRole('organizer'), async (req, res) => {
   const event = await loadOwnedEvent(req);
   const ticket = await eventTicketWithQr(event.id, req.params.ticketId);
@@ -228,6 +245,22 @@ router.get('/:id/tickets/:ticketId/qr', authenticate(), requireRole('organizer')
     data: { short_code: ticket.short_code, attendee_id: ticket.attendee_id },
   });
   res.json({ ticket });
+});
+
+// ---- Event poster QR ----------------------------------------------------------------------------
+// One QR for posters and flyers. It links to the public event page, which opens the event in the
+// mobile app. It's a public link (not a ticket), so it isn't audited.
+
+const publicEventUrl = (eventId) => `${config.publicWebUrl}/e/${eventId}`;
+
+router.get('/:id/poster', authenticate(), requireRole('organizer'), async (req, res) => {
+  const event = await loadOwnedEvent(req);
+  if (event.status === 'draft') throw conflict('Publish the event first — the poster link only works for published events.');
+  if (event.status === 'closed' || new Date(event.ends_at) < new Date()) {
+    throw conflict('This event has ended, so registration is no longer open.');
+  }
+  const url = publicEventUrl(event.id);
+  res.json({ url, qr_image: await toDataUrl(url), link_is_local: /\/\/(localhost|127\.0\.0\.1)[:/]/.test(url) });
 });
 
 // ---- Dashboards & reports ----------------------------------------------------------------------

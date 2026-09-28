@@ -54,3 +54,6 @@ export function AuthProvider({ children }) {
 }
 
 export const useAuth = () => useContext(AuthContext);
+
+/** Where to go after sign-in. Only in-app paths are allowed (a deep link can't redirect elsewhere). */
+export const afterSignIn = (next) => (typeof next === 'string' && next.startsWith('/') && !next.startsWith('//') ? next : '/');

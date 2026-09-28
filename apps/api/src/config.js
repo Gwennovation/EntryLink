@@ -23,4 +23,9 @@ export const config = {
   qrSecret: secret('QR_SECRET', 'dev-only-qr-secret-change-me'),
   corsOrigins: (process.env.CORS_ORIGINS || '*').split(',').map((s) => s.trim()),
   maxUploadBytes: 5 * 1024 * 1024,
+  // Public base URL of the web app, encoded in event poster QR codes. Phones can't open
+  // "localhost", so for on-device testing set this to http://<your-LAN-IP>:5173.
+  publicWebUrl: (process.env.PUBLIC_WEB_URL || 'http://localhost:5173').replace(/\/$/, ''),
+  // Unset = no email provider yet: email attempts are recorded in the notification log as not sent.
+  emailProvider: process.env.EMAIL_PROVIDER || null,
 };

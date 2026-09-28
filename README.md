@@ -77,6 +77,56 @@ To reset the data, delete `apps/api/.data` and run `npm run seed` again.
 > during development, tunnel the web app (e.g. `npx localtunnel --port 5173`) or use **Manual
 > check-in** (search by ticket code or name).
 
+## Testing on a phone
+
+You need your phone and this computer on the **same Wi-Fi**, and **Expo Go** installed on the phone
+(App Store / Play Store). Find your computer's Wi-Fi IP address (macOS: `ipconfig getifaddr en0`).
+The examples below use `192.168.1.13`; replace it with yours.
+
+**1. Start the API so poster QR codes link to your computer instead of `localhost`:**
+
+```bash
+PUBLIC_WEB_URL=http://192.168.1.13:5173 npm run api
+```
+
+**2. Start the web app so other devices on the Wi-Fi can open it, and point the "Register in the app" button at Expo Go:**
+
+```bash
+cd apps/web && VITE_APP_LINK_BASE="exp://192.168.1.13:8081/--/" npx vite --host
+```
+
+**3. Start the mobile app and open it in Expo Go** by scanning the QR code shown in the terminal:
+
+```bash
+npm run mobile
+```
+
+### What to try
+
+| Feature | Steps | Expected |
+|---|---|---|
+| **Poster QR** | Web as organizer@ → Metro Manila Career Fair → **Poster QR**. Point your phone's normal camera at the QR on your screen. | The phone opens the event page. Tap **Register in the EntryLink app**: Expo Go opens the event's registration screen. If you're signed out, you sign in first and then land on the event. |
+| **Registration from the poster** | Continue in the app: pick a ticket, upload any image as the receipt, submit. | It appears in the web Review queue (as coordinator@). |
+| **Resend ticket** | Web as organizer@ → event → **Tickets & QR codes** → **Show QR** on an attendee → **Resend ticket**. | That attendee's app inbox shows "Your ticket (sent again)", and tapping it opens the ticket. The web notification log (admin@) lists the email as "Not sent — no email provider". |
+| **Backup QR at the gate** | **Download PNG** or **Print** a ticket, then scan it with the gate scanner. | The first scan is accepted; scanning it again, or the attendee's own copy, shows **Duplicate**. |
+| **Gate camera on a phone** | Phone browsers only allow the camera over HTTPS, so run `npx localtunnel --port 5173` and open that https URL as gate@. | Scanning a ticket shows green ✓. |
+
+If the phone can't load anything, check that both devices are on the same Wi-Fi and that your
+computer's firewall allows incoming connections on ports 4000, 5173 and 8081.
+
+> **Expo Go vs. the real app.** Expo Go only understands `exp://` links. A dev or production build
+> of EntryLink uses `entrylink://` instead (the default `VITE_APP_LINK_BASE`), so in production the
+> poster → app hand-off works without any extra settings.
+
+## Email
+
+Nothing is emailed yet: the spec simulates notifications. The pieces are already in place, though.
+When a ticket is issued or an organizer presses **Resend ticket**, `services/email.js` builds the
+email with the QR attached and records the attempt in the notification log as "not sent". To go
+live, implement a transport for your provider (SendGrid, SES, SMTP…) in that file and set
+`EMAIL_PROVIDER`. Failed sends appear in the log as "Failed", and the organizer can resend or
+hand over a printed or downloaded QR.
+
 ## Using real PostgreSQL
 
 ```bash
@@ -111,6 +161,8 @@ and immutability, and a role-based access matrix (including separation of duties
 | FR-012 comments | `/registrations/:id/comments` · both clients |
 | FR-013 end-of-event report | `/events/:id/report[?format=csv]` |
 | Backup ticket delivery | Organizer *Tickets & QR codes* page: view, download, or print any attendee's QR (audited) |
+| Poster QR → registration | Organizer *Poster QR* page → public `/e/:id` page → app deep link `event/[id]` |
+| Resend ticket | *Tickets & QR codes* → Resend → `ticket.resent` event → in-app inbox + email hook |
 | FR-014 / NFR-002 RBAC | `requireRole()` + ownership checks · `test/rbac.test.js` |
 | NFR-005 scan < 2s | asserted in `test/flow.test.js` |
 | NFR-009 onboarding | this README + `docs/` |

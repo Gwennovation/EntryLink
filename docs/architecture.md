@@ -59,8 +59,11 @@ Gate scans QR ──▶ checkin.scanTicket()
                    └─ publish ticket.checked_in | ticket.scan_rejected ──▶ Audit, Live, Notification
 ```
 
-**Adding a real SMS/email provider** means adding one file that subscribes to `ticket.issued`
-(etc.) and registering it in `services/subscribers.js`. No other code changes.
+**Email** already works this way: `services/email.js` subscribes to `ticket.issued` and `ticket.resent`,
+builds the ticket email with the QR attached, and passes it to a transport. Until `EMAIL_PROVIDER`
+is set, the transport sends nothing and records the attempt as `not_configured` in the notification
+log. Going live means implementing one transport function; nothing that publishes events changes.
+An SMS provider would be another subscriber like it.
 
 **Scaling note:** the bus is in-process. If the API runs as several instances, swap `lib/bus.js`
 for Redis pub/sub or a queue, so SSE clients on every instance get updates. The publish and
@@ -73,12 +76,13 @@ subscribe interface stays the same.
 | `registration.submitted` / `.resubmitted` | registrations | audit, notification, live |
 | `registration.approved` / `.rejected` / `.revision_requested` | registrations | audit, notification*, live |
 | `registration.cancelled` | registrations | audit, live |
-| `ticket.issued` | registrations (on approve) | audit, notification, live |
+| `ticket.issued` | registrations (on approve) | audit, notification, email, live |
 | `ticket.checked_in` | checkin | audit, notification, live |
 | `ticket.scan_rejected` | checkin | audit, live |
 | `ticket.cancelled` | registrations (on cancel) | audit, live |
 | `comment.created` | routes/registrations | audit, notification |
 | `ticket.qr_viewed` / `ticket.qr_exported` | routes/events (organizer backup copies) | audit, live |
+| `ticket.resent` | routes/events (organizer Resend) | audit, notification, email, live |
 | `event.*`, `ticket_type.*`, `user.*`, `report.generated` | routes | audit |
 
 \* `approved` itself sends no notification; `ticket.issued` does.
@@ -110,6 +114,8 @@ Ticket lifecycle: `issued → checked_in | cancelled | expired`.
 | NFR-003 immutable audit | A DB trigger blocks UPDATE, DELETE and TRUNCATE on `audit_logs`. The SHA-256 hash chain makes out-of-band edits detectable via `GET /api/audit/verify`. |
 | QR forgery | HMAC-SHA256 signed payload with a per-ticket 128-bit secret. Coordinators and gate staff see only the short code. |
 | Organizer QR access | Only the owning organizer can view or print attendee QRs (the backup delivery path). Each view or export is audited with the ticket codes involved. |
+| Public event page | `/api/public/events/:id` is the only unauthenticated data endpoint. It returns published or closed events only, with no internal ids or attendee data. |
+| Deep-link redirects | After sign-in the app follows `next` only when it's an in-app path (`/…`, not `//…`), so a crafted link can't send users off-app. |
 | Uploads | Allow-listed MIME types, 5 MB limit, random server-side filenames, served only to authorized users. |
 | CSV injection | Report cells that start with `= + - @` are prefixed with `'`. |
 
