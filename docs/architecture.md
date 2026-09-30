@@ -136,7 +136,7 @@ Ticket lifecycle: `issued → checked_in | cancelled | expired`.
 | Deep-link redirects | After sign-in the app follows `next` only when it's an in-app path (`/…`, not `//…`), so a crafted link can't send users off-app. |
 | Uploads | 4 MB limit (Vercel request bodies max out at 4.5 MB), random storage keys, private Vercel Blob in production, and the file's first bytes must match JPG/PNG/WEBP/HEIC/PDF; the detected type is stored. Served only to authorized users, with `nosniff`. Images get a `sandbox` CSP and PDFs download, so an opened proof can't run scripts as our site. |
 | Web CSP | Production builds include a Content Security Policy: own scripts only, and requests to the same origin only. |
-| Production guards | The API refuses to start in production without `JWT_SECRET`, `QR_SECRET` and an explicit `CORS_ORIGINS`. |
+| Production guards | The API refuses to start in production without `JWT_SECRET`, `QR_SECRET` and an explicit `CORS_ORIGINS`. On Vercel it also refuses to start without a database or a Blob store, so a missing connection can't leave the demo data half-seeded. |
 | CSV injection | Report cells that start with `= + - @` are prefixed with `'`. |
 
 Known gaps: rate-limit counters are in memory (use a shared store such as Redis when running several API instances), and uploads are not virus-scanned.

@@ -8,6 +8,7 @@ process.env.UPLOAD_DIR = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'entryl
 process.env.SEED_DEMO = 'true';
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import http from 'node:http';
 import { after, before, describe, it } from 'node:test';
 
@@ -56,5 +57,25 @@ describe('Vercel function', () => {
       .attach('proof', big, { filename: 'big.png', contentType: 'image/png' });
     assert.equal(res.status, 400);
     assert.match(res.body.error.message, /4 MB or smaller/);
+  });
+});
+
+describe('Vercel startup checks', () => {
+  // config.js is evaluated once at import, so each case runs in a fresh Node process.
+  const configUrl = new URL('../src/config.js', import.meta.url).href;
+  const start = (extraEnv) => spawnSync(process.execPath, ['--input-type=module', '-e', `await import(${JSON.stringify(configUrl)})`], {
+    env: { PATH: process.env.PATH, VERCEL: '1', DATABASE_URL: 'postgres://u:p@localhost/db', ...extraEnv },
+    encoding: 'utf8',
+  });
+
+  it('refuses to start on Vercel without a Blob store, before any seeding', () => {
+    const res = start({});
+    assert.notEqual(res.status, 0);
+    assert.match(res.stderr, /No file storage connected/);
+  });
+
+  it('starts once a Blob store is connected', () => {
+    const res = start({ BLOB_STORE_ID: 'store_test' });
+    assert.equal(res.status, 0, res.stderr);
   });
 });

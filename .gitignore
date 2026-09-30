@@ -11,3 +11,6 @@ dist/
 ios/
 android/
 web-build/
+
+# Vercel CLI project link (local only)
+.vercel

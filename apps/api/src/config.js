@@ -36,6 +36,16 @@ function databaseUrl() {
   return url;
 }
 
+function blobStorage() {
+  const connected = Boolean(process.env.BLOB_STORE_ID || process.env.BLOB_READ_WRITE_TOKEN);
+  // Without Blob, receipts would go to local disk, which is read-only on Vercel. Fail at startup,
+  // before the demo seed runs, rather than half-seeding and then failing on every upload.
+  if (!connected && onVercel) {
+    throw new Error('No file storage connected. In Vercel: Storage → create a private Blob store, connect it to this project, then redeploy.');
+  }
+  return connected;
+}
+
 function secret(name, devFallback) {
   const value = process.env[name];
   if (value) return value;
@@ -63,7 +73,7 @@ export const config = {
   // 4 MB: Vercel Functions reject request bodies over 4.5 MB, and multipart adds overhead.
   maxUploadBytes: 4 * 1024 * 1024,
   // Private Vercel Blob store for receipts when one is connected; local disk otherwise.
-  blobStorage: Boolean(process.env.BLOB_STORE_ID || process.env.BLOB_READ_WRITE_TOKEN),
+  blobStorage: blobStorage(),
   // Seed the demo accounts/events on first boot if the database is empty (for demos and grading).
   seedDemo: process.env.SEED_DEMO === 'true',
   // Live dashboard: how often each open stream checks the database, and when it hands off to a
