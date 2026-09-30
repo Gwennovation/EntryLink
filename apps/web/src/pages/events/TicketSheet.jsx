@@ -1,6 +1,6 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../../api.js';
-import { ErrorNote, Logo, useLoad } from '../../components/ui.jsx';
+import { ErrorNote, Icon, Logo, useLoad } from '../../components/ui.jsx';
 import { dateRange } from '../../format.js';
 
 /** Printable sheet of QR tickets (one card per attendee). Sidebar and controls are hidden when printing. */
@@ -15,7 +15,7 @@ export default function TicketSheet() {
     <>
       <div className="page-head no-print">
         <div>
-          <Link to={`/events/${id}/tickets`} className="small">← Tickets & QR codes</Link>
+          <Link to={`/events/${id}/tickets`} className="small back-link"><Icon name="arrow-left" size="1em" />Tickets & QR codes</Link>
           <h1 style={{ marginTop: 4 }}>Print tickets</h1>
           <p>{loading ? 'Generating QR codes…' : `${tickets.length} ticket${tickets.length === 1 ? '' : 's'} ready to print.`}</p>
         </div>

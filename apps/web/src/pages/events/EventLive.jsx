@@ -34,7 +34,7 @@ export default function EventLive() {
       if (a.name === 'ticket.checked_in' || a.name === 'ticket.scan_rejected') {
         setFeed((f) => [{
           key: a.id ? `e${a.id}` : `${a.name}${a.occurred_at}`, at: a.occurred_at, result: a.name === 'ticket.checked_in' ? 'accepted' : a.data.result,
-          who: a.data.attendee_name, code: a.data.short_code, method: a.data.method,
+          who: a.data.attendee_name, code: a.data.short_code, method: a.data.method, fresh: true, // highlighted briefly as it arrives
         }, ...f].slice(0, 30));
       }
     });
@@ -85,7 +85,7 @@ export default function EventLive() {
             <table>
               <tbody>
                 {feed.map((f) => (
-                  <tr key={f.key}>
+                  <tr key={f.key} className={f.fresh ? 'fresh' : undefined}>
                     <td className="small muted" style={{ whiteSpace: 'nowrap' }}>{time(f.at)}</td>
                     <td><StatusBadge status={f.result} /></td>
                     <td>{f.who ?? <span className="muted">Unknown ticket</span>}{f.code && <div className="small muted mono">{f.code}</div>}</td>

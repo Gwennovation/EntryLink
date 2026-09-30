@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../../api.js';
 import { ROLE_LABEL, useAuth } from '../../auth.jsx';
-import { ErrorNote, StatusBadge, useAction, useLoad } from '../../components/ui.jsx';
+import { ErrorNote, Icon, StatusBadge, useAction, useLoad } from '../../components/ui.jsx';
 import { dateTime, humanize, peso } from '../../format.js';
 
 function ProofViewer({ registrationId, mime }) {
@@ -22,7 +22,7 @@ function ProofViewer({ registrationId, mime }) {
       {mime === 'application/pdf'
         ? <iframe className="proof-frame" src={url} title="Proof of payment" />
         : <img className="proof" src={url} alt="Proof of payment" />}
-      <a href={url} target="_blank" rel="noreferrer" className="small">Open full size ↗</a>
+      <a href={url} target="_blank" rel="noreferrer" className="small inline-link">Open full size <Icon name="external-link" size="1em" /></a>
     </>
   );
 }
@@ -88,7 +88,7 @@ export default function RegistrationDetail() {
     <>
       <div className="page-head">
         <div>
-          <Link to="/review" className="small">← Review queue</Link>
+          <Link to="/review" className="small back-link"><Icon name="arrow-left" size="1em" />Review queue</Link>
           <div className="row" style={{ marginTop: 4 }}><h1>{r.attendee_name}</h1><StatusBadge status={r.status} /></div>
           <p>{r.event_title} · {r.ticket_type} · {r.amount_cents ? peso(r.amount_cents) : 'Free'}</p>
         </div>
@@ -112,9 +112,9 @@ export default function RegistrationDetail() {
               <label>Note to attendee <span className="field-hint">optional for approval</span>
                 <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Reference number doesn't match our bank records" />
               </label>
-              <button className="ok" disabled={act.busy} onClick={() => decide('approve', 'Approved')}>✓ Approve & issue ticket</button>
-              <button disabled={act.busy || !hasNote} onClick={() => decide('request-revision', 'Revision requested')}>↺ Request revision</button>
-              <button className="danger" disabled={act.busy || !hasNote} onClick={() => decide('reject', 'Rejected')}>✕ Reject</button>
+              <button className="ok" disabled={act.busy} onClick={() => decide('approve', 'Approved')}><Icon name="check" />Approve & issue ticket</button>
+              <button disabled={act.busy || !hasNote} onClick={() => decide('request-revision', 'Revision requested')}><Icon name="rotate-ccw" />Request revision</button>
+              <button className="danger" disabled={act.busy || !hasNote} onClick={() => decide('reject', 'Rejected')}><Icon name="x" />Reject</button>
               {!hasNote && <p className="small muted" style={{ margin: 0 }}>Write a note first to enable <strong>Request revision</strong> or <strong>Reject</strong>. The attendee sees it, so tell them what to fix or why.</p>}
             </div>
           )}

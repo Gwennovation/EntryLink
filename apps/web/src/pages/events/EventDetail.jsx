@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../../api.js';
 import { useAuth } from '../../auth.jsx';
-import { ErrorNote, StatusBadge, useAction, useLoad } from '../../components/ui.jsx';
+import { ErrorNote, Icon, StatusBadge, useAction, useLoad } from '../../components/ui.jsx';
 import { dateRange, peso } from '../../format.js';
 import EventForm from './EventForm.jsx';
 
@@ -99,8 +99,8 @@ export default function EventDetail() {
                 <span className="spacer" />
                 <span>{t.price_cents ? peso(t.price_cents) : 'Free'}</span>
                 {editable && t.sold === 0 && (
-                  <button className="small danger" disabled={act.busy} title="Delete ticket type"
-                    onClick={() => doAction(() => api.del(`/events/${id}/ticket-types/${t.id}`), `Delete ticket type "${t.name}"?`)}>✕</button>
+                  <button className="small danger" disabled={act.busy} title="Delete ticket type" aria-label={`Delete ticket type ${t.name}`}
+                    onClick={() => doAction(() => api.del(`/events/${id}/ticket-types/${t.id}`), `Delete ticket type "${t.name}"?`)}><Icon name="x" size="1em" /></button>
                 )}
               </div>
             ))}

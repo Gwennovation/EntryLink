@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../../api.js';
-import { ErrorNote, Logo, useLoad } from '../../components/ui.jsx';
+import { ErrorNote, Icon, Logo, useLoad } from '../../components/ui.jsx';
 import { dateRange } from '../../format.js';
 
 /** Printable poster with one QR that takes people to the event's public registration page. */
@@ -16,7 +16,7 @@ export default function EventPoster() {
     <>
       <div className="page-head no-print">
         <div>
-          <Link to={`/events/${id}`} className="small">← {e?.title ?? 'Event'}</Link>
+          <Link to={`/events/${id}`} className="small back-link"><Icon name="arrow-left" size="1em" />{e?.title ?? 'Event'}</Link>
           <h1 style={{ marginTop: 4 }}>Event poster QR</h1>
           <p>Put this on posters, flyers or slides. Scanning it opens the event page, which sends people to the app to register.</p>
         </div>

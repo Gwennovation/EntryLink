@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api.js';
-import { ErrorNote, StatusBadge, useAction, useLoad } from '../../components/ui.jsx';
+import { ErrorNote, Icon, StatusBadge, useAction, useLoad } from '../../components/ui.jsx';
 import { dateRange, time } from '../../format.js';
 
 /**
@@ -38,7 +38,7 @@ export default function EventTickets() {
     <>
       <div className="page-head">
         <div>
-          <Link to={`/events/${id}`} className="small">← {e?.title ?? 'Event'}</Link>
+          <Link to={`/events/${id}`} className="small back-link"><Icon name="arrow-left" size="1em" />{e?.title ?? 'Event'}</Link>
           <h1 style={{ marginTop: 4 }}>Tickets & QR codes</h1>
           <p>Backup copies of attendee tickets, in case an attendee didn’t receive theirs. Viewing or printing a QR is recorded in the audit log.</p>
         </div>

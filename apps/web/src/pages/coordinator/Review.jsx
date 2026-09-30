@@ -24,11 +24,11 @@ export default function Review() {
       </div>
       <div className="card">
         <div className="row" style={{ marginBottom: 8 }}>
-          <select value={eventId} onChange={(e) => setParam('event_id', e.target.value)}>
+          <select value={eventId} onChange={(e) => setParam('event_id', e.target.value)} aria-label="Filter by event">
             <option value="">All events</option>
             {events.data?.events.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
           </select>
-          <input placeholder="Search name, email or payment ref" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input type="search" className="grow" placeholder="Search name, email or payment ref" aria-label="Search registrations" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <div className="tabs">
           {TABS.map(([value, label]) => {

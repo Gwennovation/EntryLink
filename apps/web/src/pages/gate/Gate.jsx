@@ -1,7 +1,7 @@
 import jsQR from 'jsqr';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../../api.js';
-import { ErrorNote, StatusBadge, useAction, useLoad } from '../../components/ui.jsx';
+import { ErrorNote, Icon, StatusBadge, useAction, useLoad } from '../../components/ui.jsx';
 import { humanize, time } from '../../format.js';
 import { playResult, unlockSound } from './sounds.js';
 
@@ -9,6 +9,12 @@ const RESULT_HOLD_MS = 2500;   // how long the big green/red banner stays up
 const SAME_CODE_COOLDOWN_MS = 4000; // ignore the same QR still held in front of the camera
 const HEADCOUNT_POLL_MS = 15_000;
 const SOUND_KEY = 'entrylink.gate.sound';
+
+/** Headcount as a percentage; a handful of people in a big venue reads "<1%", not a misleading 0%. */
+const percentLabel = (inside, capacity) => {
+  const pct = (inside / capacity) * 100;
+  return inside > 0 && pct < 1 ? '<1%' : `${Math.round(pct)}%`;
+};
 
 const readSoundPref = () => {
   try { return localStorage.getItem(SOUND_KEY) !== 'off'; } catch { return true; }
@@ -68,9 +74,9 @@ function useQrCamera(videoRef, active, onCode) {
         return videoRef.current.play().then(() => { setRunning(true); raf = requestAnimationFrame(tick); });
       })
       .catch((err) => setCamError(err?.name === 'NotAllowedError'
-        ? 'Camera permission was denied. Allow camera access in your browser, or use manual lookup below.'
-        : 'No camera available. Use manual lookup below.'));
-    if (!navigator.mediaDevices) setCamError('This browser cannot access the camera (HTTPS is required). Use manual lookup below.');
+        ? 'Camera permission was denied. Allow camera access in your browser, or use Manual check-in.'
+        : 'No camera available. Use Manual check-in instead.'));
+    if (!navigator.mediaDevices) setCamError('This browser cannot access the camera (HTTPS is required). Use Manual check-in instead.');
 
     return () => {
       stopped = true;
@@ -156,11 +162,13 @@ export default function Gate() {
           {openEvents.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
         </select>
         <button className="gate-control" onClick={toggleSound} aria-pressed={sound} title="Beep on each scan">
-          {sound ? '🔊 Sound on' : '🔇 Sound off'}
+          <Icon name={sound ? 'volume-on' : 'volume-off'} />{sound ? 'Sound on' : 'Sound off'}
         </button>
         {/* Pausing only makes sense when there's a camera to pause. */}
         {!camError && (
-          <button className="gate-control" onClick={() => setCameraOn((c) => !c)}>{cameraOn ? 'Pause camera' : 'Resume camera'}</button>
+          <button className="gate-control" onClick={() => setCameraOn((c) => !c)}>
+            <Icon name={cameraOn ? 'pause' : 'play'} />{cameraOn ? 'Pause camera' : 'Resume camera'}
+          </button>
         )}
       </div>
       {stats && (
@@ -171,7 +179,7 @@ export default function Gate() {
           <div className="meter" style={{ flex: 1, marginTop: 0 }}>
             <span style={{ width: `${Math.min(100, (stats.checked_in / stats.capacity) * 100)}%` }} />
           </div>
-          <span className="muted small">{Math.round((stats.checked_in / stats.capacity) * 100)}%</span>
+          <span className="muted small">{percentLabel(stats.checked_in, stats.capacity)}</span>
         </div>
       )}
       <ErrorNote error={events.error || error} />
@@ -183,10 +191,10 @@ export default function Gate() {
             {running && <div className="reticle" />}
             {!running && <div className="placeholder">{camError ?? (cameraOn ? 'Starting camera…' : 'Camera paused')}</div>}
           </div>
-          <div className={`scan-result ${result ? (result.valid ? 'valid' : 'invalid') : 'idle'}`} aria-live="assertive">
+          <div key={result ? log[0]?.key : 'idle'} className={`scan-result ${result ? (result.valid ? 'valid' : 'invalid') : 'idle'}`} aria-live="assertive">
             {result ? (
               <>
-                <div className="big">{result.valid ? '✓ VALID' : `✕ ${humanize(result.result).toUpperCase()}`}</div>
+                <div className="big"><Icon name={result.valid ? 'check' : 'x'} strokeWidth={3} />{result.valid ? 'VALID' : humanize(result.result).toUpperCase()}</div>
                 <div className="msg">{result.message}</div>
                 {result.ticket && <div style={{ opacity: 0.9, marginTop: 4 }}>{result.ticket.ticket_type} · <span className="mono">{result.ticket.short_code}</span></div>}
               </>
