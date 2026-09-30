@@ -84,7 +84,8 @@ export async function seedDemo() {
     title: 'Metro Manila Career Fair 2026',
     description: 'Meet 60+ employers across tech, finance and BPO. Bring copies of your résumé.',
     venue: 'SMX Convention Center, Pasay City',
-    starts_at: new Date(now - hour), ends_at: new Date(now + 7 * hour), capacity: 300,
+    // Runs for two days from seeding, so data seeded the night before still works on demo day.
+    starts_at: new Date(now - hour), ends_at: new Date(now + 48 * hour), capacity: 300,
   }, [['General Admission', 15000, null], ['Student', 5000, 100]]);
 
   const conf = await createEvent({
