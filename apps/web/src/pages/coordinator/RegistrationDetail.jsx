@@ -5,9 +5,11 @@ import { ROLE_LABEL, useAuth } from '../../auth.jsx';
 import { ErrorNote, Icon, StatusBadge, useAction, useLoad } from '../../components/ui.jsx';
 import { dateTime, humanize, peso } from '../../format.js';
 
-function ProofViewer({ registrationId, mime }) {
+function ProofViewer({ registrationId, mime, registration }) {
   const [url, setUrl] = useState(null);
   const [error, setError] = useState(null);
+  const [legacyDemoProof, setLegacyDemoProof] = useState(false);
+  const [imageReady, setImageReady] = useState(false);
   useEffect(() => {
     let objectUrl;
     api.blob(`/registrations/${registrationId}/proof`)
@@ -17,11 +19,28 @@ function ProofViewer({ registrationId, mime }) {
   }, [registrationId]);
   if (error) return <ErrorNote error={error} />;
   if (!url) return <div className="empty">Loading proof…</div>;
+  if (legacyDemoProof) return (
+    <div className="proof-demo">
+      <span className="small muted">DEMO REGISTRATION</span>
+      <h3>Sample payment proof</h3>
+      <p>The original demo upload was a single green pixel. No real payment was made.</p>
+      <div className="small muted">Payment reference</div>
+      <strong className="mono">{registration.payment_reference}</strong>
+    </div>
+  );
   return (
     <>
       {mime === 'application/pdf'
         ? <iframe className="proof-frame" src={url} title="Proof of payment" />
-        : <img className="proof" src={url} alt="Proof of payment" />}
+        : <img className="proof" src={url} alt="Proof of payment" style={{ visibility: imageReady ? 'visible' : 'hidden' }}
+          onLoad={(e) => {
+            if (registration.attendee_email?.endsWith('@entrylink.test') && e.currentTarget.naturalWidth === 1 && e.currentTarget.naturalHeight === 1) {
+              setLegacyDemoProof(true);
+            } else {
+              setImageReady(true);
+            }
+          }}
+          onError={() => setError(new Error('The proof image could not be displayed.'))} />}
       <a href={url} target="_blank" rel="noreferrer" className="small inline-link">Open full size <Icon name="external-link" size="1em" /></a>
     </>
   );
@@ -99,7 +118,7 @@ export default function RegistrationDetail() {
         <div className="stack">
           <div className="card">
             <h2>Proof of payment</h2>
-            {r.has_proof ? <ProofViewer registrationId={r.id} mime={r.proof_mime} key={`${r.id}-${r.version}`} /> : <div className="empty">{r.amount_cents ? 'No proof uploaded.' : 'Free ticket — no payment required.'}</div>}
+            {r.has_proof ? <ProofViewer registrationId={r.id} mime={r.proof_mime} registration={r} key={`${r.id}-${r.version}`} /> : <div className="empty">{r.amount_cents ? 'No proof uploaded.' : 'Free ticket — no payment required.'}</div>}
           </div>
           <Comments registrationId={r.id} canPost={user.role === 'coordinator'} />
         </div>

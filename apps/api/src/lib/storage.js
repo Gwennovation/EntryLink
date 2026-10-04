@@ -9,7 +9,7 @@ import path from 'node:path';
 import { Readable } from 'node:stream';
 import { config } from '../config.js';
 
-const EXTENSIONS = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/heic': '.heic', 'application/pdf': '.pdf' };
+const EXTENSIONS = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/heic': '.heic', 'image/svg+xml': '.svg', 'application/pdf': '.pdf' };
 
 const local = {
   name: 'local disk',

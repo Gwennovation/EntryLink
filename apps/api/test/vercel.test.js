@@ -42,8 +42,9 @@ describe('Vercel function', () => {
     const withProof = queue.body.registrations.find((r) => r.has_proof);
     const proof = await request(server).get(`/api/registrations/${withProof.id}/proof`).set('Authorization', `Bearer ${coord}`);
     assert.equal(proof.status, 200);
-    assert.equal(proof.headers['content-type'], 'image/png');
-    assert.ok(proof.body.length > 0);
+    assert.equal(proof.headers['content-type'], 'image/svg+xml');
+    assert.match(proof.body.toString(), /Sample payment proof/);
+    assert.match(proof.body.toString(), /For demonstration only/);
   });
 
   it('rejects uploads over 4 MB with a clear message', async () => {
