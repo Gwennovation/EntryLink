@@ -90,6 +90,7 @@ Roles: `admin`, `organizer`, `coordinator`, `gate_staff`, `attendee`.
 | GET | `/registrations?event_id=&status=&q=` | coordinator, organizer (own events) | Review queue, oldest first. Also returns `counts` per status (plus `all`) for the same filters, for the tab badges. |
 | GET | `/registrations/:id` | owner, coordinator, event organizer | `{ registration, history[], ticket }` |
 | GET | `/registrations/:id/proof` | same | Streams the uploaded file |
+| GET | `/registrations/:id/ticket-qr` | coordinator, event organizer | `{ ticket }` with the issued QR, identical to the attendee wallet. 404 before approval; every view is audited. |
 | POST | `/registrations/:id/approve` | coordinator | `{ note? }` → `{ registration, ticket }`. **Issues the QR ticket.** |
 | POST | `/registrations/:id/reject` | coordinator | `{ note }` (required) |
 | POST | `/registrations/:id/request-revision` | coordinator | `{ note }` (required) |
@@ -106,8 +107,9 @@ Roles: `admin`, `organizer`, `coordinator`, `gate_staff`, `attendee`.
 ## Organizer backup QR codes
 
 For when an attendee didn't receive their ticket (failed delivery, lost phone, no app). Only the
-**owning organizer** can use these; coordinators, gate staff and admins get 403. A QR is a bearer
-credential, so every view and export is written to the audit log (`ticket.qr_viewed`, `ticket.qr_exported`).
+**owning organizer** can use these event-wide endpoints; coordinators, gate staff and admins get 403.
+Coordinators can view an issued QR on a specific registration through the review endpoint above.
+A QR is a bearer credential, so every view and export is written to the audit log (`ticket.qr_viewed`, `ticket.qr_exported`).
 
 | Method | Path | Role | Notes |
 |---|---|---|---|

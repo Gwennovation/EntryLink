@@ -52,6 +52,11 @@ describe('registration → approval → ticket → gate (spec §2.4)', () => {
     assert.equal(res.headers['content-type'], 'image/png');
   });
 
+  it('has no ticket QR before approval', async () => {
+    const res = await ctx.as('coordinator').get(`/api/registrations/${registration.id}/ticket-qr`);
+    assert.equal(res.status, 404);
+  });
+
   it('supports request-revision → resubmit (FR-003, version tracking)', async () => {
     const noNote = await ctx.as('coordinator').post(`/api/registrations/${registration.id}/request-revision`).send({});
     assert.equal(noNote.status, 400, 'a note is required');
@@ -88,6 +93,23 @@ describe('registration → approval → ticket → gate (spec §2.4)', () => {
 
     const notes = await ctx.as('attendee').get('/api/notifications/mine');
     assert.ok(notes.body.notifications.some((n) => n.type === 'ticket.issued'));
+  });
+
+  it('shows the same issued QR on the coordinator registration screen', async () => {
+    const url = `/api/registrations/${registration.id}/ticket-qr`;
+    for (const role of ['coordinator', 'organizer']) {
+      const res = await ctx.as(role).get(url);
+      assert.equal(res.status, 200, `${role}: ${JSON.stringify(res.body)}`);
+      assert.equal(res.body.ticket.qr_payload, ticket.qr_payload);
+      assert.ok(res.body.ticket.qr_image.startsWith('data:image/png;base64,'));
+      assert.equal(res.body.ticket.secret, undefined);
+      assert.match(res.headers['cache-control'], /no-store/);
+    }
+    for (const role of ['admin', 'gate_staff', 'attendee']) {
+      assert.equal((await ctx.as(role).get(url)).status, 403, role);
+    }
+    const audit = await ctx.as('admin').get('/api/audit?action=ticket.qr_viewed');
+    assert.ok(audit.body.entries.some((entry) => entry.actor_id === ctx.users.coordinator.id && entry.entity_id === ticket.id));
   });
 
   it('accepts a valid scan, then rejects the duplicate (FR-005, FR-006)', async () => {
@@ -155,7 +177,7 @@ describe('capacity', () => {
     const regs = [];
     for (const n of [1, 2]) {
       const signup = await request(ctx.app).post('/api/auth/signup')
-        .send({ email: `cap${n}@test.local`, password: 'Password123!', full_name: `Cap ${n}` });
+        .send({ email: `cap${n}@test.local`, password: 'Password123456!', full_name: `Cap ${n}` });
       const r = await request(ctx.app).post('/api/registrations').set('Authorization', `Bearer ${signup.body.token}`)
         .field('event_id', event.id).field('ticket_type_id', free.id);
       assert.equal(r.status, 201, JSON.stringify(r.body));

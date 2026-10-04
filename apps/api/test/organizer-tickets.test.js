@@ -83,10 +83,13 @@ describe('organizer ticket roster & backup QR codes', () => {
   }
 
   it('another organizer cannot pull this event’s QR codes', async () => {
-    await ctx.as('admin').post('/api/users').send({ email: 'org2@test.local', full_name: 'Other Org', role: 'organizer', password: 'Password123!' });
-    const login = await request(ctx.app).post('/api/auth/login').send({ email: 'org2@test.local', password: 'Password123!' });
+    await ctx.as('admin').post('/api/users').send({ email: 'org2@test.local', full_name: 'Other Org', role: 'organizer', password: 'Password123456!' });
+    const login = await request(ctx.app).post('/api/auth/login').send({ email: 'org2@test.local', password: 'Password123456!' });
     const res = await request(ctx.app).get(`/api/events/${event.id}/tickets/${ticketId}/qr`).set('Authorization', `Bearer ${login.body.token}`);
     assert.equal(res.status, 403);
+    const reviewQr = await request(ctx.app).get(`/api/registrations/${(await ctx.as('attendee').get('/api/tickets/mine')).body.tickets[0].registration_id}/ticket-qr`)
+      .set('Authorization', `Bearer ${login.body.token}`);
+    assert.equal(reviewQr.status, 403);
   });
 
   it('a ticket id from a different event is not found', async () => {

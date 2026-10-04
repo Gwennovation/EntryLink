@@ -13,12 +13,14 @@ export const ticketsRouter = Router();
 ticketsRouter.use(authenticate(), requireRole('attendee'));
 
 ticketsRouter.get('/mine', async (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
   res.json({ tickets: await ticketsForAttendee(req.user.id) });
 });
 
 ticketsRouter.get('/:id', async (req, res) => {
   const ticket = await ticketForAttendee(req.params.id, req.user.id);
   if (!ticket) throw notFound('Ticket');
+  res.set('Cache-Control', 'private, no-store');
   res.json({ ticket });
 });
 

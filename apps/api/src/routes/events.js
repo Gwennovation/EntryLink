@@ -248,6 +248,7 @@ router.get('/:id/tickets/qr-sheet', authenticate(), requireRole('organizer'), va
     actorId: req.user.id, entityType: 'event', entityId: event.id, eventId: event.id,
     data: { count: result.tickets.length, filters: req.valid.query, short_codes: result.tickets.map((t) => t.short_code) },
   });
+  res.set('Cache-Control', 'private, no-store');
   res.json(result);
 });
 
@@ -274,6 +275,7 @@ router.get('/:id/tickets/:ticketId/qr', authenticate(), requireRole('organizer')
     actorId: req.user.id, entityType: 'ticket', entityId: ticket.id, eventId: event.id,
     data: { short_code: ticket.short_code, attendee_id: ticket.attendee_id },
   });
+  res.set('Cache-Control', 'private, no-store');
   res.json({ ticket });
 });
 

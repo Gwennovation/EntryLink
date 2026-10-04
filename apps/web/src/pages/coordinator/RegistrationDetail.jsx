@@ -78,6 +78,23 @@ function Comments({ registrationId, canPost }) {
   );
 }
 
+function IssuedTicketQr({ registrationId, ticket }) {
+  const { data, error, loading } = useLoad(() => api.get(`/registrations/${registrationId}/ticket-qr`), [registrationId], { pollMs: 0 });
+  return (
+    <div className="card stack">
+      <h2 style={{ margin: 0 }}>Issued ticket QR</h2>
+      <p className="small muted" style={{ margin: 0 }}>The attendee has this same code in their ticket wallet. Show it at the gate to check in once.</p>
+      <ErrorNote error={error} />
+      {loading && !data && <div className="empty">Loading ticket QR…</div>}
+      {data && <>
+        <img className="qr-large" src={data.ticket.qr_image} alt={`QR ticket ${ticket.short_code}`} style={{ opacity: ticket.status === 'issued' ? 1 : 0.3 }} />
+        <strong className="mono" style={{ textAlign: 'center', fontSize: 18 }}>{ticket.short_code}</strong>
+        {ticket.status !== 'issued' && <div className="alert info">This ticket is {ticket.status.replace('_', ' ')} and cannot be used for entry.</div>}
+      </>}
+    </div>
+  );
+}
+
 export default function RegistrationDetail() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -124,6 +141,7 @@ export default function RegistrationDetail() {
         </div>
 
         <div className="stack">
+          {ticket && <IssuedTicketQr registrationId={r.id} ticket={ticket} />}
           {canReview && (
             <div className="card stack">
               <h2 style={{ margin: 0 }}>Decision</h2>

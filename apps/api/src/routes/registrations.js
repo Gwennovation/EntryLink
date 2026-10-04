@@ -8,6 +8,7 @@ import { authenticate, requireRole } from '../middleware/auth.js';
 import { storage } from '../lib/storage.js';
 import { discardUpload, proofUpload } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
+import { eventTicketWithQr } from '../services/tickets.js';
 import {
   approveRegistration, cancelRegistration, getRegistrationFor, rejectRegistration,
   requestRevision, resubmitRegistration, submitRegistration,
@@ -123,6 +124,22 @@ router.get('/:id', async (req, res) => {
   );
   const ticket = await one('SELECT id, short_code, status, issued_at, checked_in_at FROM tickets WHERE registration_id = $1', [reg.id]);
   res.json({ registration: present(reg), history, ticket });
+});
+
+// The reviewer can inspect the issued ticket directly from an approved registration. A QR is
+// a bearer credential, so keep this scoped to review staff and audit each view.
+router.get('/:id/ticket-qr', requireRole('coordinator', 'organizer'), async (req, res) => {
+  const reg = await getRegistrationFor(req.user, req.params.id);
+  const issued = await one('SELECT id FROM tickets WHERE registration_id = $1', [reg.id]);
+  if (!issued) throw notFound('Ticket');
+  const ticket = await eventTicketWithQr(reg.event_id, issued.id);
+  if (!ticket) throw notFound('Ticket');
+  await publish('ticket.qr_viewed', {
+    actorId: req.user.id, entityType: 'ticket', entityId: ticket.id, eventId: reg.event_id,
+    data: { registration_id: reg.id, short_code: ticket.short_code, attendee_id: reg.attendee_id, source: 'registration' },
+  });
+  res.set('Cache-Control', 'private, no-store');
+  res.json({ ticket });
 });
 
 router.get('/:id/proof', async (req, res) => {
