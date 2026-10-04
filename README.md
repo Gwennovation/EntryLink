@@ -59,7 +59,7 @@ All demo accounts use the password `EntryLink123!`.
 | Gate Staff | gate@entrylink.test | web (open `/gate` on a phone or laptop with a camera) |
 | Attendee | attendee@entrylink.test, juan@…, maria@… | mobile |
 
-The seed creates an event that is **happening now** and runs for 48 hours (for trying the gate), and a future conference,
+The seed creates an event that is **happening now** and stays open for a year (for trying the gate on any day), and a conference six months out,
 with registrations in pending, approved, and revision-requested states.
 
 To reset the data, delete `apps/api/.data` and run `npm run seed` again.

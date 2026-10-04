@@ -61,6 +61,7 @@ export async function seedDemo() {
   }
 
   const hour = 3600_000;
+  const day = 24 * hour;
   const now = Date.now();
   async function createEvent(fields, types) {
     const e = await one(
@@ -84,15 +85,17 @@ export async function seedDemo() {
     title: 'Metro Manila Career Fair 2026',
     description: 'Meet 60+ employers across tech, finance and BPO. Bring copies of your résumé.',
     venue: 'SMX Convention Center, Pasay City',
-    // Runs for two days from seeding, so data seeded the night before still works on demo day.
-    starts_at: new Date(now - hour), ends_at: new Date(now + 48 * hour), capacity: 300,
+    // Runs for a year from seeding, so the gate and live dashboard work on any demo day without a
+    // reset. (Tickets still can't be reused: a scanned ticket stays checked in.)
+    starts_at: new Date(now - hour), ends_at: new Date(now + 365 * day), capacity: 300,
   }, [['General Admission', 15000, null], ['Student', 5000, 100]]);
 
   const conf = await createEvent({
     title: 'Philippine Tech Summit',
     description: 'Two tracks of talks on cloud, AI and product engineering, plus a startup expo.',
     venue: 'PICC, Pasay City',
-    starts_at: new Date(now + 21 * 24 * hour), ends_at: new Date(now + 21 * 24 * hour + 9 * hour), capacity: 3000,
+    // Six months out, so it stays "upcoming" (open for registration) for the whole school term.
+    starts_at: new Date(now + 180 * day), ends_at: new Date(now + 180 * day + 9 * hour), capacity: 3000,
   }, [['Regular', 250000, null], ['Early Bird', 180000, 500], ['Community Pass', 0, 200]]);
 
   const register = async (who, ev, typeIdx, ref) => submitRegistration({
