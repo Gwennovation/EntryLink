@@ -8,7 +8,7 @@ const blankType = () => ({ name: '', price: '', quantity: '' });
  * Create or edit an event. On create it also collects ticket types.
  * Prices are entered in pesos and sent as centavos.
  */
-export default function EventForm({ initial, withTicketTypes, onSubmit, onCancel, busy, error, submitLabel }) {
+export default function EventForm({ initial, withTicketTypes, onSubmit, onCancel, busy, error, submitLabel, formId }) {
   const [f, setF] = useState(() => ({
     title: initial?.title ?? '',
     description: initial?.description ?? '',
@@ -33,11 +33,11 @@ export default function EventForm({ initial, withTicketTypes, onSubmit, onCancel
         name: t.name, price_cents: Math.round(Number(t.price || 0) * 100), quantity: t.quantity ? Number(t.quantity) : null,
       }));
     }
-    onSubmit(body);
+    onSubmit(body, { publish: e.nativeEvent.submitter?.value === 'publish' });
   };
 
   return (
-    <form className="card stack" onSubmit={submit}>
+    <form id={formId} className="card stack" onSubmit={submit}>
       <ErrorNote error={error} />
       <div className="form-grid">
         <label style={{ gridColumn: '1 / -1' }}>Title<input required minLength={3} value={f.title} onChange={set('title')} placeholder="e.g. Metro Manila Career Fair 2026" /></label>
@@ -73,7 +73,7 @@ export default function EventForm({ initial, withTicketTypes, onSubmit, onCancel
       )}
 
       <div className="row">
-        <button className="primary" disabled={busy}>{submitLabel}</button>
+        <button className="primary" name="intent" value="save" disabled={busy}>{submitLabel}</button>
         {onCancel && <button type="button" onClick={onCancel}>Cancel</button>}
       </div>
     </form>

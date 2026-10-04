@@ -36,6 +36,15 @@ export default function EventDetail() {
     });
   };
 
+  const saveEvent = (body, { publish = false } = {}) => {
+    const confirmText = publish ? 'Save these changes and publish this event? Attendees will be able to see it and register.' : null;
+    doAction(async () => {
+      await api.patch(`/events/${id}`, body);
+      if (publish) await api.post(`/events/${id}/publish`);
+      return true;
+    }, confirmText);
+  };
+
   return (
     <>
       <div className="page-head">
@@ -49,8 +58,10 @@ export default function EventDetail() {
           {owner && e.status !== 'draft' && <Link className="btn" to={`/events/${id}/tickets`}>Tickets & QR codes</Link>}
           {owner && e.status === 'published' && <Link className="btn" to={`/events/${id}/poster`}>Poster QR</Link>}
           {owner && e.status === 'draft' && (
-            <button className="primary" disabled={act.busy} onClick={() => doAction(() => api.post(`/events/${id}/publish`),
-              'Publish this event? Attendees will be able to see it and register.')}>Publish</button>
+            editing
+              ? <button className="primary" type="submit" form="event-edit-form" name="intent" value="publish" disabled={act.busy}>Save & publish</button>
+              : <button className="primary" disabled={act.busy} onClick={() => doAction(() => api.post(`/events/${id}/publish`),
+                'Publish this event? Attendees will be able to see it and register.')}>Publish</button>
           )}
           {owner && e.status === 'published' && (
             <button className="danger" disabled={act.busy} onClick={() => doAction(() => api.post(`/events/${id}/close`),
@@ -63,8 +74,8 @@ export default function EventDetail() {
       <div className="grid grid-3" style={{ marginTop: 12 }}>
         <div>
           {editing ? (
-            <EventForm initial={e} submitLabel="Save changes" busy={act.busy}
-              onSubmit={(body) => doAction(() => api.patch(`/events/${id}`, body))} onCancel={() => setEditing(false)} />
+            <EventForm initial={e} formId="event-edit-form" submitLabel="Save changes" busy={act.busy}
+              onSubmit={saveEvent} onCancel={() => setEditing(false)} />
           ) : (
             <div className="card">
               <div className="row" style={{ marginBottom: 8 }}>
