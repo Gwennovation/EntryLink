@@ -1,6 +1,6 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, useColorScheme, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, AppState, Platform, Pressable, StyleSheet, Text, TextInput, useColorScheme, View } from 'react-native';
 
 // Same palettes as the web dashboard's CSS tokens; every text/background pair meets WCAG AA
 // (4.5:1 for text, 3:1 for input borders). The app follows the phone's light/dark setting.
@@ -136,14 +136,48 @@ export function Empty({ title, body }) {
   );
 }
 
-/** Load data whenever the screen gains focus; returns { data, error, loading, reload }. */
+const LIVE_REFRESH_MS = 3000;
+const isForeground = () => Platform.OS === 'web'
+  ? document.visibilityState !== 'hidden'
+  : AppState.currentState !== 'background' && AppState.currentState !== 'inactive';
+
+/** Refresh a focused screen while the app is foregrounded; preserve data if a refresh fails. */
 export function useFocusLoad(fn, deps = []) {
   const [state, setState] = useState({ data: null, error: null, loading: true });
+  const requestId = useRef(0);
+  const polling = useRef(false);
+  const active = useRef(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const reload = useCallback(async () => {
-    setState((x) => ({ ...x, loading: true }));
-    try { setState({ data: await fn(), error: null, loading: false }); } catch (error) { setState((x) => ({ ...x, error, loading: false })); }
-  }, deps);
-  useFocusEffect(useCallback(() => { reload(); }, [reload]));
+  const load = useCallback(fn, deps);
+  const reload = useCallback(async (background = false) => {
+    const id = ++requestId.current;
+    if (!background) setState((x) => ({ ...x, loading: true }));
+    try {
+      const data = await load();
+      if (active.current && id === requestId.current) setState({ data, error: null, loading: false });
+    } catch (error) {
+      if (active.current && id === requestId.current) setState((x) => ({ ...x, error, loading: false }));
+    }
+  }, [load]);
+  useFocusEffect(useCallback(() => {
+    active.current = true;
+    if (isForeground()) reload();
+    const refresh = () => {
+      if (!isForeground() || polling.current) return;
+      polling.current = true;
+      reload(true).finally(() => { polling.current = false; });
+    };
+    const timer = setInterval(refresh, LIVE_REFRESH_MS);
+    const appState = Platform.OS === 'web' ? null : AppState.addEventListener('change', (next) => { if (next === 'active') reload(); });
+    const onVisibility = () => { if (isForeground()) reload(); };
+    if (Platform.OS === 'web') document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      active.current = false;
+      requestId.current++;
+      clearInterval(timer);
+      appState?.remove();
+      if (Platform.OS === 'web') document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [reload]));
   return { ...state, reload };
 }

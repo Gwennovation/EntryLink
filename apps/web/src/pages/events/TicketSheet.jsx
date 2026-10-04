@@ -8,7 +8,7 @@ export default function TicketSheet() {
   const { id } = useParams();
   const [params] = useSearchParams();
   const qs = params.toString();
-  const { data, error, loading } = useLoad(() => api.get(`/events/${id}/tickets/qr-sheet?${qs}`), [id, qs]);
+  const { data, error, loading } = useLoad(() => api.get(`/events/${id}/tickets/qr-sheet?${qs}`), [id, qs], { pollMs: 0 });
   const tickets = data?.tickets ?? [];
 
   return (

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { humanize } from '../format.js';
 
 const TONE = {
@@ -51,18 +51,46 @@ export function Stat({ label, value, sub, meter }) {
   );
 }
 
-/** Load data from an async function; returns { data, error, loading, reload, setData }. */
-export function useLoad(fn, deps = []) {
+/** Refresh visible pages automatically; keep the last good result if a refresh fails. */
+export function useLoad(fn, deps = [], options = {}) {
   const [state, setState] = useState({ data: null, error: null, loading: true });
+  const requestId = useRef(0);
+  const mounted = useRef(false);
+  const polling = useRef(false);
+  const pollMs = options.pollMs ?? 3000;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const load = useCallback(fn, deps);
-  const reload = useCallback(() => {
-    setState((s) => ({ ...s, loading: true }));
-    return load()
-      .then((data) => setState({ data, error: null, loading: false }))
-      .catch((error) => setState({ data: null, error, loading: false }));
+  const reload = useCallback(async (background = false) => {
+    const id = ++requestId.current;
+    if (!background) setState((s) => ({ ...s, loading: true }));
+    try {
+      const data = await load();
+      if (mounted.current && id === requestId.current) setState({ data, error: null, loading: false });
+      return data;
+    } catch (error) {
+      if (mounted.current && id === requestId.current) setState((s) => ({ ...s, error, loading: false }));
+      return undefined;
+    }
   }, [load]);
-  useEffect(() => { reload(); }, [reload]);
+  useEffect(() => {
+    mounted.current = true;
+    const counter = requestId;
+    reload();
+    const refresh = () => {
+      if (document.visibilityState === 'hidden' || polling.current) return;
+      polling.current = true;
+      reload(true).finally(() => { polling.current = false; });
+    };
+    const timer = pollMs > 0 ? setInterval(refresh, pollMs) : null;
+    const onVisibility = () => { if (document.visibilityState === 'visible') reload(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      mounted.current = false;
+      counter.current++;
+      if (timer) clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [reload, pollMs]);
   return { ...state, reload, setData: (data) => setState((s) => ({ ...s, data })) };
 }
 

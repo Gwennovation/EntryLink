@@ -11,7 +11,7 @@ import { validate } from '../middleware/validate.js';
 
 export const router = Router();
 
-export const passwordSchema = z.string().min(8, 'must be at least 8 characters').max(128);
+export const passwordSchema = z.string().min(15, 'must be at least 15 characters').max(128);
 const publicUser = ({ password_hash, failed_login_count, locked_until, token_version, ...u }) => u;
 // 'cookie' = web dashboard (httpOnly cookie, no token in the body); omitted = mobile (Bearer token).
 const sessionField = z.enum(['cookie']).optional();

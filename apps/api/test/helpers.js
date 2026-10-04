@@ -13,7 +13,7 @@ const db = await import('../src/db/index.js');
 const { registerSubscribers } = await import('../src/services/subscribers.js');
 
 export { db, request };
-export const PASSWORD = 'Password123!';
+export const PASSWORD = 'Password123456!';
 export const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64',
 );

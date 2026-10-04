@@ -48,7 +48,7 @@ describe('Vercel function', () => {
   });
 
   it('rejects uploads over 4 MB with a clear message', async () => {
-    const signup = await request(server).post('/api/auth/signup').send({ email: 'big@test.local', password: 'Password123!', full_name: 'Big File' });
+    const signup = await request(server).post('/api/auth/signup').send({ email: 'big@test.local', password: 'Password123456!', full_name: 'Big File' });
     const events = await request(server).get('/api/events').set('Authorization', `Bearer ${signup.body.token}`);
     const e = events.body.events[0];
     const paid = e.ticket_types.find((t) => t.price_cents > 0);

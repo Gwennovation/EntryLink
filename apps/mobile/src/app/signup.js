@@ -31,8 +31,8 @@ export default function Signup() {
         <Field label="Full name" value={f.full_name} onChangeText={set('full_name')} autoComplete="name" textContentType="name" />
         <Field label="Email" value={f.email} onChangeText={set('email')} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
         <Field label="Mobile number" hint="optional" value={f.phone} onChangeText={set('phone')} keyboardType="phone-pad" autoComplete="tel" />
-        <Field label="Password" hint="at least 8 characters" value={f.password} onChangeText={set('password')} secureTextEntry textContentType="newPassword" />
-        <Button title="Create account" onPress={submit} busy={busy} disabled={!f.full_name || !f.email || f.password.length < 8} />
+        <Field label="Password" hint="at least 15 characters" value={f.password} onChangeText={set('password')} secureTextEntry textContentType="newPassword" />
+        <Button title="Create account" onPress={submit} busy={busy} disabled={!f.full_name || !f.email || f.password.length < 15} />
       </ScrollView>
     </KeyboardAvoidingView>
   );

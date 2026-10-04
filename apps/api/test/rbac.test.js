@@ -23,7 +23,7 @@ describe('RBAC', () => {
 
   it('public signup always creates an attendee, never staff', async () => {
     const res = await request(ctx.app).post('/api/auth/signup')
-      .send({ email: 'sneaky@test.local', password: 'Password123!', full_name: 'Sneaky', role: 'admin' });
+      .send({ email: 'sneaky@test.local', password: 'Password123456!', full_name: 'Sneaky', role: 'admin' });
     assert.equal(res.status, 201);
     assert.equal(res.body.user.role, 'attendee');
   });
@@ -49,17 +49,17 @@ describe('RBAC', () => {
 
   it('attendees cannot see other attendees’ registrations', async () => {
     const other = await request(ctx.app).post('/api/auth/signup')
-      .send({ email: 'other@test.local', password: 'Password123!', full_name: 'Other' });
+      .send({ email: 'other@test.local', password: 'Password123456!', full_name: 'Other' });
     const res = await request(ctx.app).get(`/api/registrations/${registrationId}`).set('Authorization', `Bearer ${other.body.token}`);
     assert.equal(res.status, 404);
   });
 
   it('organizers can only manage their own events', async () => {
     const created = await ctx.as('admin').post('/api/users').send({
-      email: 'org2@test.local', full_name: 'Second Organizer', role: 'organizer', password: 'Password123!',
+      email: 'org2@test.local', full_name: 'Second Organizer', role: 'organizer', password: 'Password123456!',
     });
     assert.equal(created.status, 201);
-    const login = await request(ctx.app).post('/api/auth/login').send({ email: 'org2@test.local', password: 'Password123!' });
+    const login = await request(ctx.app).post('/api/auth/login').send({ email: 'org2@test.local', password: 'Password123456!' });
     const res = await request(ctx.app).patch(`/api/events/${event.id}`)
       .set('Authorization', `Bearer ${login.body.token}`).send({ title: 'Hijacked' });
     assert.equal(res.status, 403);
@@ -67,9 +67,9 @@ describe('RBAC', () => {
 
   it('deactivating a user revokes access immediately', async () => {
     const created = await ctx.as('admin').post('/api/users').send({
-      email: 'temp@test.local', full_name: 'Temp Gate', role: 'gate_staff', password: 'Password123!',
+      email: 'temp@test.local', full_name: 'Temp Gate', role: 'gate_staff', password: 'Password123456!',
     });
-    const login = await request(ctx.app).post('/api/auth/login').send({ email: 'temp@test.local', password: 'Password123!' });
+    const login = await request(ctx.app).post('/api/auth/login').send({ email: 'temp@test.local', password: 'Password123456!' });
     await ctx.as('admin').patch(`/api/users/${created.body.user.id}`).send({ is_active: false });
     const res = await request(ctx.app).get('/api/auth/me').set('Authorization', `Bearer ${login.body.token}`);
     assert.equal(res.status, 401);

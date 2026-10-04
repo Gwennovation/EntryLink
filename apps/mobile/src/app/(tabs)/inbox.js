@@ -11,7 +11,6 @@ export default function Inbox() {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      tabBarBadge: data?.unread || undefined,
       headerRight: () => (data?.unread ? (
         <Text style={{ color: colors.brand, fontWeight: '600', marginRight: 16 }} onPress={async () => { await api.post('/notifications/read-all'); reload(); }}>
           Mark all read

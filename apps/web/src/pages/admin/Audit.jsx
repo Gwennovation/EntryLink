@@ -11,7 +11,8 @@ export default function Audit() {
   const [action, setAction] = useState('');
   const [pages, setPages] = useState([]); // older pages appended via "Load more"
   const qs = new URLSearchParams(Object.entries({ entity_type: entityType, action, limit: '50' }).filter(([, v]) => v));
-  const { data, error } = useLoad(() => { setPages([]); return api.get(`/audit?${qs}`); }, [qs.toString()]);
+  const filterKey = qs.toString();
+  const { data, error } = useLoad(() => api.get(`/audit?${filterKey}`), [filterKey]);
   const more = useAction();
   const verify = useAction();
   const [verdict, setVerdict] = useState(null);
@@ -44,10 +45,10 @@ export default function Audit() {
       <ErrorNote error={verify.error} />
       <div className="card">
         <div className="row" style={{ marginBottom: 12 }}>
-          <select value={entityType} onChange={(e) => setEntityType(e.target.value)}>
+          <select value={entityType} onChange={(e) => { setEntityType(e.target.value); setPages([]); }}>
             {ENTITY_TYPES.map((t) => <option key={t} value={t}>{t ? t.replace('_', ' ') : 'All entities'}</option>)}
           </select>
-          <input placeholder="Action, e.g. registration.approved" value={action} onChange={(e) => setAction(e.target.value.trim())} />
+          <input placeholder="Action, e.g. registration.approved" value={action} onChange={(e) => { setAction(e.target.value.trim()); setPages([]); }} />
         </div>
         <ErrorNote error={error || more.error} />
         <div className="table-wrap">

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import http from 'node:http';
 import { after, before, describe, it } from 'node:test';
-import { createLiveEvent, PASSWORD, PNG, request, setup, teardown } from './helpers.js';
+import { createLiveEvent, db, PASSWORD, PNG, request, setup, teardown } from './helpers.js';
 
 const { createApp } = await import('../src/app.js');
 
@@ -28,9 +28,9 @@ describe('brute-force protection', () => {
   });
 
   it('an admin password reset unlocks the account', async () => {
-    const res = await ctx.as('admin').post(`/api/users/${ctx.users.gate_staff.id}/reset-password`).send({ password: 'NewPassword456!' });
+    const res = await ctx.as('admin').post(`/api/users/${ctx.users.gate_staff.id}/reset-password`).send({ password: 'NewPassword456789!' });
     assert.equal(res.status, 204);
-    assert.equal((await login(ctx.app, 'gate_staff@test.local', 'NewPassword456!')).status, 200);
+    assert.equal((await login(ctx.app, 'gate_staff@test.local', 'NewPassword456789!')).status, 200);
   });
 
   it('a successful sign-in resets the failure count', async () => {
@@ -42,14 +42,44 @@ describe('brute-force protection', () => {
   });
 
   it('rate-limits sign-in attempts per IP, and spoofed X-Forwarded-For does not help', async () => {
-    const app = createApp(); // fresh counters
+    await db.query("DELETE FROM auth_rate_limits WHERE action = 'login'");
+    const apps = [createApp(), createApp()];
     let last;
     for (let i = 0; i < 31; i++) {
-      last = await request(app).post('/api/auth/login').set('X-Forwarded-For', `10.0.0.${i}`)
+      last = await request(apps[i % 2]).post('/api/auth/login').set('X-Forwarded-For', `10.0.0.${i}`)
         .send({ email: `nobody${i}@test.local`, password: 'whatever1' });
     }
     assert.equal(last.status, 429);
     assert.equal(last.body.error.code, 'rate_limited');
+    await db.query("DELETE FROM auth_rate_limits WHERE action = 'login'");
+  });
+});
+
+describe('account creation protection', () => {
+  it('requires a long password on signup and admin-created accounts', async () => {
+    const signup = await request(ctx.app).post('/api/auth/signup')
+      .send({ email: 'short@test.local', full_name: 'Short Password', password: 'short-password' });
+    assert.equal(signup.status, 400);
+    const staff = await ctx.as('admin').post('/api/users')
+      .send({ email: 'staff-short@test.local', full_name: 'Staff Short', role: 'gate_staff', password: 'short-password' });
+    assert.equal(staff.status, 400);
+  });
+
+  it('shares the signup limit across app instances', async () => {
+    await db.query("DELETE FROM auth_rate_limits WHERE action = 'signup'");
+    const apps = [createApp(), createApp()];
+    try {
+      let last;
+      for (let i = 0; i < 21; i++) {
+        last = await request(apps[i % 2]).post('/api/auth/signup')
+          .send({ email: `spam${i}@test.local`, full_name: 'Spam Test', password: PASSWORD });
+        if (i < 20) assert.equal(last.status, 201, JSON.stringify(last.body));
+      }
+      assert.equal(last.status, 429);
+      assert.equal(last.body.error.code, 'rate_limited');
+    } finally {
+      await db.query("DELETE FROM auth_rate_limits WHERE action = 'signup'");
+    }
   });
 });
 
@@ -81,7 +111,7 @@ describe('upload content checks', () => {
   });
 
   it('PDF proofs download instead of opening in the browser', async () => {
-    const signup = await request(ctx.app).post('/api/auth/signup').send({ email: 'pdf@test.local', password: 'Password123!', full_name: 'Pdf Person' });
+    const signup = await request(ctx.app).post('/api/auth/signup').send({ email: 'pdf@test.local', password: 'Password123456!', full_name: 'Pdf Person' });
     const res = await request(ctx.app).post('/api/registrations').set('Authorization', `Bearer ${signup.body.token}`)
       .field('event_id', event.id).field('ticket_type_id', paid.id).field('payment_reference', 'REF-10')
       .attach('proof', Buffer.from('%PDF-1.7\n%fake but valid header\n'), { filename: 'r.pdf', contentType: 'application/pdf' });
@@ -91,7 +121,7 @@ describe('upload content checks', () => {
   });
 
   it('accepts a real PNG', async () => {
-    const signup = await request(ctx.app).post('/api/auth/signup').send({ email: 'png@test.local', password: 'Password123!', full_name: 'Png Person' });
+    const signup = await request(ctx.app).post('/api/auth/signup').send({ email: 'png@test.local', password: 'Password123456!', full_name: 'Png Person' });
     const res = await request(ctx.app).post('/api/registrations').set('Authorization', `Bearer ${signup.body.token}`)
       .field('event_id', event.id).field('ticket_type_id', paid.id).field('payment_reference', 'REF-11')
       .attach('proof', PNG, { filename: 'r.png', contentType: 'image/png' });
@@ -133,7 +163,7 @@ describe('session revocation', () => {
   it('changing your password signs out other sessions but keeps this one', async () => {
     const other = (await login(ctx.app, 'attendee@test.local', PASSWORD)).body.token;
     const res = await request(ctx.app).post('/api/auth/change-password').set('Authorization', `Bearer ${other}`)
-      .send({ current_password: PASSWORD, new_password: 'Changed789!' });
+      .send({ current_password: PASSWORD, new_password: 'ChangedPassword789!' });
     assert.equal(res.status, 200, JSON.stringify(res.body));
     assert.ok(res.body.token, 'caller gets a fresh token');
 
@@ -203,4 +233,3 @@ describe('production config guards', () => {
     assert.match(r.stderr, /JWT_SECRET must be set/);
   });
 });
-

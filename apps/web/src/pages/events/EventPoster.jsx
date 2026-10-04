@@ -7,7 +7,7 @@ import { dateRange } from '../../format.js';
 export default function EventPoster() {
   const { id } = useParams();
   const event = useLoad(() => api.get(`/events/${id}`), [id]);
-  const poster = useLoad(() => api.get(`/events/${id}/poster`), [id]);
+  const poster = useLoad(() => api.get(`/events/${id}/poster`), [id], { pollMs: 0 });
   const e = event.data?.event;
   const p = poster.data;
   const slug = e?.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

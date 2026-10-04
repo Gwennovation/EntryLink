@@ -16,7 +16,7 @@ export default function EventTickets() {
   const event = useLoad(() => api.get(`/events/${id}`), [id]);
   const qs = new URLSearchParams(Object.entries({ q, status }).filter(([, v]) => v)).toString();
   const roster = useLoad(() => api.get(`/events/${id}/tickets?${qs}`), [id, qs]);
-  const [selected, setSelected] = useState(null);
+  const [selectedQr, setSelectedQr] = useState(null);
   const show = useAction();
 
   const resend = useAction();
@@ -25,7 +25,7 @@ export default function EventTickets() {
   const open = async (t) => {
     setResent(null);
     const res = await show.run(() => api.get(`/events/${id}/tickets/${t.id}/qr`));
-    if (res) setSelected(res.ticket);
+    if (res) setSelectedQr(res.ticket);
   };
   const resendTicket = async () => {
     const res = await resend.run(() => api.post(`/events/${id}/tickets/${selected.id}/resend`));
@@ -34,6 +34,8 @@ export default function EventTickets() {
   const printSheet = (params) => navigate(`/events/${id}/tickets/print?${new URLSearchParams(params)}`);
 
   const e = event.data?.event;
+  const currentTicket = roster.data?.tickets.find((t) => t.id === selectedQr?.id);
+  const selected = selectedQr && (roster.data ? (currentTicket ? { ...selectedQr, ...currentTicket } : null) : selectedQr);
   return (
     <>
       <div className="page-head">

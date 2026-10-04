@@ -8,7 +8,7 @@ import { dateRange, humanize, peso, time } from '../../format.js';
 export default function EventLive() {
   const { id } = useParams();
   const event = useLoad(() => api.get(`/events/${id}`), [id]);
-  const initial = useLoad(() => api.get(`/events/${id}/stats`), [id]);
+  const initial = useLoad(() => api.get(`/events/${id}/stats`), [id], { pollMs: 0 });
   const [stats, setStats] = useState(null);
   const [feed, setFeed] = useState([]);
   const [connected, setConnected] = useState(false);

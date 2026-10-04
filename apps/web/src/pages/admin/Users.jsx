@@ -13,6 +13,8 @@ export default function Users() {
   const qs = new URLSearchParams(Object.entries(filter).filter(([, v]) => v)).toString();
   const { data, error, reload } = useLoad(() => api.get(`/users?${qs}`), [qs]);
   const [form, setForm] = useState(null);
+  const [resetUser, setResetUser] = useState(null);
+  const [resetValue, setResetValue] = useState('');
   const create = useAction();
   const update = useAction();
 
@@ -22,9 +24,12 @@ export default function Users() {
     if (await create.run(() => api.post('/users', body))) { setForm(null); reload(); }
   };
   const patch = async (u, changes) => { if (await update.run(() => api.patch(`/users/${u.id}`, changes))) reload(); };
-  const resetPassword = async (u) => {
-    const password = window.prompt(`New temporary password for ${u.full_name} (min 8 characters):`);
-    if (password) await update.run(() => api.post(`/users/${u.id}/reset-password`, { password }));
+  const resetPassword = async (e) => {
+    e.preventDefault();
+    if (await update.run(() => api.post(`/users/${resetUser.id}/reset-password`, { password: resetValue }))) {
+      setResetValue('');
+      setResetUser(null);
+    }
   };
 
   return (
@@ -47,11 +52,24 @@ export default function Users() {
                 {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
               </select>
             </label>
-            <label>Temporary password<input required minLength={8} type="text" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></label>
+            <label>Temporary password<input required minLength={15} maxLength={128} type="password" autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></label>
           </div>
           <div className="row">
             <button className="primary" disabled={create.busy}>Create user</button>
             <button type="button" onClick={() => setForm(null)}>Cancel</button>
+          </div>
+        </form>
+      )}
+
+      {resetUser && (
+        <form className="card stack" onSubmit={resetPassword} style={{ marginBottom: 16 }}>
+          <h2>Reset password for {resetUser.full_name}</h2>
+          <p className="muted">Set a temporary password of at least 15 characters. Existing sessions will be signed out.</p>
+          <ErrorNote error={update.error} />
+          <label>Temporary password<input required minLength={15} maxLength={128} type="password" autoComplete="new-password" value={resetValue} onChange={(e) => setResetValue(e.target.value)} /></label>
+          <div className="row">
+            <button className="primary" disabled={update.busy}>Reset password</button>
+            <button type="button" onClick={() => { setResetValue(''); setResetUser(null); }}>Cancel</button>
           </div>
         </form>
       )}
@@ -83,7 +101,7 @@ export default function Users() {
                     <td><span className={`badge ${u.is_active ? 'ok' : ''}`}>{u.is_active ? 'Active' : 'Deactivated'}</span></td>
                     <td className="muted">{dateTime(u.created_at)}</td>
                     <td className="row" style={{ justifyContent: 'flex-end' }}>
-                      <button className="small" onClick={() => resetPassword(u)}>Reset password</button>
+                      <button className="small" onClick={() => { setResetUser(u); setResetValue(''); update.setError(null); }}>Reset password</button>
                       {!self && (
                         <button className={`small ${u.is_active ? 'danger' : ''}`} onClick={() => patch(u, { is_active: !u.is_active })}>
                           {u.is_active ? 'Deactivate' : 'Reactivate'}

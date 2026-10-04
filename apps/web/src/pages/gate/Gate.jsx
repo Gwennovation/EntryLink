@@ -7,7 +7,7 @@ import { playResult, unlockSound } from './sounds.js';
 
 const RESULT_HOLD_MS = 2500;   // how long the big green/red banner stays up
 const SAME_CODE_COOLDOWN_MS = 4000; // ignore the same QR still held in front of the camera
-const HEADCOUNT_POLL_MS = 15_000;
+const HEADCOUNT_POLL_MS = 3_000;
 const SOUND_KEY = 'entrylink.gate.sound';
 
 /** Headcount as a percentage; a handful of people in a big venue reads "<1%", not a misleading 0%. */

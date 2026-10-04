@@ -68,7 +68,7 @@ To reset the data, delete `apps/api/.data` and run `npm run seed` again.
 
 1. **Mobile** (as maria@): the registration is pending. Or sign up as a new attendee, open an event, pick a ticket, and upload any image as the receipt.
 2. **Web** (as coordinator@): open the Review queue, open the registration, check the proof, and approve it.
-3. **Mobile**: an inbox notification appears and the QR ticket shows up under Tickets.
+3. **Mobile**: while the app is open, the inbox badge and QR ticket appear automatically within about 3 seconds.
 4. **Web** (as organizer@): open *Metro Manila Career Fair → Live dashboard* in one window.
 5. **Web** (as gate@, ideally on a phone): open Gate scanner and scan the ticket. You'll see green ✓, and the organizer's dashboard ticks up instantly. Scan the same ticket again and you'll see red **Duplicate**.
 6. **Web** (as admin@): open the Audit log and click **Verify integrity**.
@@ -186,7 +186,7 @@ After that, every push to `main` deploys to production, and every pull request g
 - **Receipts** are capped at **4 MB** (Vercel's request limit is 4.5 MB). Phone screenshots are well under that.
 - **The live dashboard** reconnects on its own about every 4½ minutes. Vercel ends long requests at 5 minutes,
   so the stream hands off first. It checks the database every 3 seconds, so it shows scans handled by any server instance.
-- **Rate limits** are counted per server instance. That's fine at this scale; use a shared store such as Upstash Redis if traffic grows.
+- **Sign-in and signup limits** are shared in PostgreSQL across server instances. General API traffic still has a per-instance limit.
 - **Sign-in stays on one domain.** Keep the web app and API on the same Vercel project. The session cookie
   is `SameSite=Strict`, so a separately hosted API wouldn't receive it.
 
@@ -223,6 +223,7 @@ production if the first three are missing.
 - [ ] Set these headers on the **web host** (a `<meta>` tag can't): `Strict-Transport-Security: max-age=31536000; includeSubDomains`, `X-Frame-Options: DENY` (or CSP `frame-ancestors 'none'`), and `Referrer-Policy: strict-origin-when-cross-origin`. The API sets its own through Helmet.
 - [ ] Managed PostgreSQL (`DATABASE_URL`) with automatic daily backups (spec NFR-008), connected with a database user that isn't a superuser.
 - [ ] Change or remove the seeded demo accounts. The demo password is public in this repo.
+- [ ] Configure an email delivery provider and verified-address signup before allowing real users. The current app records notifications in-app; it does not send verification mail or push notifications.
 - [ ] On GitHub: Dependabot alerts, secret scanning with push protection, and branch protection for `main` requiring CI to pass.
 
 ## Requirements traceability
